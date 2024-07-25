@@ -31,7 +31,7 @@ export function activate(context: vscode.ExtensionContext) {
         // Create and show input panel
         const panel = vscode.window.createWebviewPanel(
             'llmgateInput',
-            'Prompt Testing',
+            'Prompt Testing with LLMGate',
             vscode.ViewColumn.One,
             {
                 enableScripts: true
@@ -113,27 +113,26 @@ function getInputWebviewContent(selectedText: string): string {
         </style>
     </head>
     <body>
-        <h2>Prompt:</h2>
+        <h3>Prompt to test:</h3>
         <textarea id="prompt">${selectedText}</textarea>
         
-        <h2>User Role Details:</h2>
-        <textarea id="userRole"></textarea>
+        <h3>Describe Your Target User:</h3>
+        <p>LLMGate will utilize this information to generate relevant questions for testing your prompt.</p>
+        <textarea id="userRole" placeholder="E.g., College students seeking investment advice and tips"></textarea>
         
-        <h2>JSON File (Optional):</h2>
-        <input type="file" id="jsonFile" accept=".json">
-        
-        <h2>LLM Providers:</h2>
+        <h3>LLM Providers:</h3>
+        <p>LLM Providers for your test</p>
         <input type="text" id="llmProviders" value="OpenAI,gpt-4o,0.6;OpenAI,gpt-4o-mini,0.6;Gemini,gemini-1.5-flash,0.6">
         
         <br>
         <button id="submitButton">Submit</button>
-        <div id="errorMessage">Either User Role Details or JSON File is required</div>
+        <div id="errorMessage">User Role Details is required</div>
 
         <script>
             const vscode = acquireVsCodeApi();
             const promptElement = document.getElementById('prompt');
             const userRoleElement = document.getElementById('userRole');
-            const jsonFileElement = document.getElementById('jsonFile');
+
             const llmProvidersElement = document.getElementById('llmProviders');
             const submitButton = document.getElementById('submitButton');
             const errorMessageElement = document.getElementById('errorMessage');
@@ -148,7 +147,7 @@ function getInputWebviewContent(selectedText: string): string {
                     promptElement.classList.remove('error');
                 }
 
-                if (!userRoleElement.value.trim() && !jsonFileElement.files[0]) {
+                if (!userRoleElement.value.trim()) {
                     errorMessageElement.style.display = 'block';
                     isValid = false;
                 } else {
@@ -177,38 +176,19 @@ function getInputWebviewContent(selectedText: string): string {
                 errorMessageElement.style.display = 'none';
             });
 
-            jsonFileElement.addEventListener('change', () => {
-                errorMessageElement.style.display = 'none';
-            });
-
             submitButton.addEventListener('click', () => {
                 if (validateInputs()) {
                     const prompt = promptElement.value;
                     const userRoleDetails = userRoleElement.value;
-                    const jsonFile = jsonFileElement.files[0];
                     const testProviders = parseProviders(llmProvidersElement.value);
 
-                    if (jsonFile) {
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                            vscode.postMessage({
-                                command: 'submit',
-                                prompt: prompt,
-                                userRoleDetails: userRoleDetails,
-                                jsonContent: event.target.result,
-                                testProviders: testProviders
-                            });
-                        };
-                        reader.readAsText(jsonFile);
-                    } else {
-                        vscode.postMessage({
+                    vscode.postMessage({
                             command: 'submit',
                             prompt: prompt,
                             userRoleDetails: userRoleDetails,
                             jsonContent: null,
                             testProviders: testProviders
                         });
-                    }
                 }
             });
         </script>
@@ -289,8 +269,20 @@ function showResponseInWebview(response: any) {
         {}
     );
 
+    const summaryDiv = generateSummaryDiv(response);
     const htmlContent = generateHtmlTable(response);
-    panel.webview.html = getWebviewContent(htmlContent);
+    panel.webview.html = getWebviewContent(summaryDiv, htmlContent);
+}
+
+function generateSummaryDiv(response: any): string {
+    let html = "";
+    if (response.summary !== null) {
+        html += "<div>";
+        html += "<h3>Summary</h3>";
+        html += "<p>" + response.summary + "</p>";
+        html += "</div>";
+    }
+    return html;
 }
 
 function generateHtmlTable(response: any): string {
@@ -352,7 +344,7 @@ function generateHtmlTable(response: any): string {
     return html;
 }
 
-function getWebviewContent(htmlTable: string): string {
+function getWebviewContent(summaryDiv: string, htmlTable: string): string {
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -425,6 +417,7 @@ function getWebviewContent(htmlTable: string): string {
 </head>
 <body>
     <h1>LLMGate Test Results</h1>
+    ${summaryDiv}
     ${htmlTable}
     <script>
         document.addEventListener('click', function(e) {
