@@ -1,8 +1,9 @@
 {
   "name": "llmgate",
   "displayName": "LLMGate",
-  "description": "Run tests on prompts right from VS Code",
+  "description": "Run tests on your Prompts right from VS Code. Never ship a bad prompt.",
   "version": "0.0.1",
+  "publisher": "LLMGate",
   "engines": {
     "vscode": "^1.91.0"
   },
@@ -15,7 +16,7 @@
     "commands": [
       {
         "command": "llmgate.runTest",
-        "title": "LLMGate: Run Prompt Testing on your selected text"
+        "title": "LLMGate: Test your Prompt"
       }
     ],
     "configuration": {

@@ -126,7 +126,7 @@ function getInputWebviewContent(selectedText: string): string {
         
         <br>
         <button id="submitButton">Submit</button>
-        <div id="errorMessage">User Role Details is required</div>
+        <div id="errorMessage">Describing Your Target User is required</div>
 
         <script>
             const vscode = acquireVsCodeApi();
