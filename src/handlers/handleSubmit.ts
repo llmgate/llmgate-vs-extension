@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import axios from 'axios';
 import { BACKEND_URL } from '../utils/constants';
-import { updateStreamingResponseInWebview } from '../utils/updateResponse';
+import { updateErrorInWebview, updateMetricsInWebview, updateStreamingResponseInWebview } from '../utils/updateResponse';
 import { promptForApiKey } from '../utils/promptForApiKey';
 
 export async function handleSubmit(systemPrompt: string, userPrompts: string[], maxTokens: number, temperature: number, llmProvider: string, llmModel: string, panel: vscode.WebviewPanel) {
@@ -62,10 +62,14 @@ export async function handleSubmit(systemPrompt: string, userPrompts: string[], 
                 isExternalLLMKey,
                 (chunk: string) => {
                     updateStreamingResponseInWebview(chunk, panel);
+                },
+                (metrics: any) => {
+                    updateMetricsInWebview(metrics, panel);
                 }
             );
         } catch (error) {
             vscode.window.showErrorMessage('Error testing your prompt. Please try again!');
+            updateErrorInWebview(panel);
         }
     });
 }
@@ -73,7 +77,8 @@ export async function handleSubmit(systemPrompt: string, userPrompts: string[], 
 async function sendToBackend(systemPrompt: string, userPrompts: string[], maxTokens: number, temperature: number, 
     llmProvider: string, llmModel: string, 
     apiKey: string, isExternalLLMKey: boolean,
-    onChunk: (chunk: string) => void): Promise<void> {
+    onChunk: (chunk: string) => void,
+    onMetrics: (metrics: any) => void): Promise<void> {
     let messages = [
         {
             "role": "system",
@@ -108,6 +113,7 @@ async function sendToBackend(systemPrompt: string, userPrompts: string[], maxTok
 
     return new Promise((resolve, reject) => {
         let buffer = '';
+        let isMetricsExpected = false;
         response.data.on('data', (chunk: Buffer) => {
             const chunkStr = chunk.toString('utf-8');
             buffer += chunkStr;
@@ -124,12 +130,23 @@ async function sendToBackend(systemPrompt: string, userPrompts: string[], maxTok
                 }
                 if (jsonStr.length > 0) {
                     if (jsonStr.trim() === '[DONE]') {
+                        // Main content stream is finished, expect metrics
+                        isMetricsExpected = true;
+                        continue;
+                    }
+                    if (jsonStr.trim() === '[METRICS]') {
+                        // Metrics are coming next
+                        continue;
+                    }
+                    if (jsonStr.trim() === '[CLOSE]') {
                         resolve();
                         return;
                     }
                     try {
                         const jsonData = JSON.parse(jsonStr);
-                        if (jsonData.choices && jsonData.choices[0].delta && jsonData.choices[0].delta.content) {
+                        if (isMetricsExpected) {
+                            onMetrics(jsonData);
+                        } else if (jsonData.choices && jsonData.choices[0].delta && jsonData.choices[0].delta.content) {
                             onChunk(jsonData.choices[0].delta.content);
                         }
                     } catch (e) {

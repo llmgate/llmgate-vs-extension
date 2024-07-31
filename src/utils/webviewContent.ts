@@ -142,6 +142,38 @@ export function getInputWebviewContent(selectedText: string): string {
             padding-left: 8px;
             max-width: 100%;
         }
+        .completion-result {
+            border: 1px solid var(--vscode-panel-border);
+            margin-bottom: 16px;
+            padding: 8px;
+        }
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        .result-header h3 {
+            margin: 0;
+        }
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: var(--vscode-editor-foreground);
+            cursor: pointer;
+        }
+        .result-content {
+            margin-bottom: 8px;
+            overflow: hidden;
+        }
+        .result-content.collapsed {
+            max-height: 3em; /* Approximately 2 lines */
+            text-overflow: ellipsis;
+        }
+        .result-metrics {
+            font-size: 12px;
+            color: var(--vscode-descriptionForeground);
+        }
     </style>
 </head>
 <body>
@@ -205,7 +237,8 @@ export function getInputWebviewContent(selectedText: string): string {
         </div>
         <div id="responseSection">
             <div class="title-header">Completions</div>
-            <div id="streamingResults"></div>
+            <div id="streamingResult"></div>
+            <div id="completedResults"></div>
         </div>
     </div>
     <script>
@@ -216,6 +249,13 @@ export function getInputWebviewContent(selectedText: string): string {
         const executeButton = document.getElementById('executeButton');
         const providerSelect = document.getElementById('providerSelect');
         const modelSelect = document.getElementById('modelSelect');
+
+        let completionResults = [];
+
+        function addNewResult(content, metrics) {
+            completionResults.unshift({ content, metrics });
+            updateResultsDisplay();
+        }
 
         const openAIModels = ${JSON.stringify(openAIModels)};
         const geminiModels = ${JSON.stringify(geminiModels)};
@@ -271,8 +311,20 @@ export function getInputWebviewContent(selectedText: string): string {
 
         document.addEventListener('DOMContentLoaded', setupAutoResizeTextareas);
 
+        function disableExecuteButton() {
+            executeButton.disabled = true;
+            executeButton.style.opacity = '0.5';
+            executeButton.style.cursor = 'not-allowed';
+        }
+
+        function enableExecuteButton() {
+            executeButton.disabled = false;
+            executeButton.style.opacity = '1';
+            executeButton.style.cursor = 'pointer';
+        }
+
         executeButton.addEventListener('click', () => {
-            clearStreamingResults();
+            disableExecuteButton();
             const systemMessage = systemMessageElement.value;
             const blocks = Array.from(document.querySelectorAll('.blockContent')).map(el => el.value);
             vscode.postMessage({
@@ -286,29 +338,108 @@ export function getInputWebviewContent(selectedText: string): string {
             });
         });
 
-        window.addEventListener('message', event => {
-            const message = event.data;
-            switch (message.command) {
-                case 'updateResults':
-                    document.getElementById('summary').innerHTML = message.summary;
-                    document.getElementById('resultsTable').innerHTML = message.resultsTable;
-                    break;
-            }
-        });
-
+        let currentStreamingContent = '';
+        let completedResults = [];
         window.addEventListener('message', event => {
             const message = event.data;
             switch (message.command) {
                 case 'appendStreamingResults':
-                    const streamingResults = document.getElementById('streamingResults');
-                    streamingResults.innerHTML += message.content;
-                    streamingResults.scrollTop = streamingResults.scrollHeight;
+                    currentStreamingContent += message.content;
+                    updateStreamingResult();
+                    enableExecuteButton();
+                    break;
+                case 'updateMetrics':
+                    addCompletedResult(currentStreamingContent, message.metrics);
+                    clearStreamingResults()
+                    currentStreamingContent = '';
+                    enableExecuteButton();
+                    break;
+                case 'error':
+                    enableExecuteButton();
                     break;
             }
         });
 
+        function updateStreamingResult() {
+           document.getElementById('streamingResult').innerHTML = \`
+                <div class="completion-result">
+                    <h5>Current Completion</h5>
+                    <div class="result-content">\${currentStreamingContent}</div>
+                </div>
+            \`;
+        }
+
+        function updateCompletedResultsDisplay() {
+            const completedResultsContainer = document.getElementById('completedResults');
+            completedResultsContainer.innerHTML = completedResults.map((result, index) => \`
+            <div class="completion-result">
+                <div class="result-header" onclick="toggleResult(\${index})">
+                    <h5>Completion \${completedResults.length - index}</h5>
+                    <button class="toggle-btn" id="toggleBtn\${index}">▼</button>
+                </div>
+                <div class="result-content" id="content\${index}">
+                    \${result.content}
+                </div>
+                <div class="result-metrics">
+                    Latency: \${nanoToMilliseconds(result.metrics.latency).toFixed(2)} ms, 
+                    Cost: $\${result.metrics.cost.toFixed(6)}
+                </div>
+            </div>
+            \`).join('');
+        }
+
+        function toggleResult(index) {
+            const content = document.getElementById(\`content\${index}\`);
+            const toggleBtn = document.getElementById(\`toggleBtn\${index}\`);
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                toggleBtn.textContent = '▼';
+            } else {
+                content.classList.add('collapsed');
+                toggleBtn.textContent = '▶';
+            }
+        }
+
+        // Add this function to set initial state
+        function setInitialResultsState() {
+            completedResults.forEach((_, index) => {
+                const content = document.getElementById(\`content\${index}\`);
+                const toggleBtn = document.getElementById(\`toggleBtn\${index}\`);
+                if (content && toggleBtn) {
+                    content.classList.remove('collapsed');
+                    toggleBtn.textContent = '▼';
+                }
+            });
+        }
+
+        // Modify the addCompletedResult function
+        function addCompletedResult(content, metrics) {
+            completedResults.unshift({ content, metrics });
+            updateCompletedResultsDisplay();
+            setInitialResultsState(); // Set initial state after updating display
+        }
+
         function clearStreamingResults() {
-            document.getElementById('streamingResults').innerHTML = '';
+            currentStreamingContent = '';
+            document.getElementById('streamingResult').innerHTML = '';
+        }
+
+        function nanoToMilliseconds(nanoseconds) {
+            return nanoseconds / 1000000; // or nanoseconds / 1e6
+        }
+
+        function updateResultsDisplay() {
+            const streamingResults = document.getElementById('streamingResults');
+            streamingResults.innerHTML = completionResults.map((result, index) => \`
+                <div class="completion-result">
+                    <h3>Completion \${completionResults.length - index}</h3>
+                    <div class="result-content">\${result.content}</div>
+                    <div class="result-metrics">
+                        Latency: \${nanoToMilliseconds(result.metrics.latency).toFixed(2)} ms, 
+                        Cost: $\${result.metrics.cost.toFixed(6)}
+                    </div>
+                </div>
+            \`).join('');
         }
     </script>
 </body>
