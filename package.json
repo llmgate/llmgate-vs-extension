@@ -26,6 +26,16 @@
           "type": "string",
           "default": "",
           "description": "API Key for LLMGate service"
+        },
+        "llmgate.openaiKey": {
+          "type": "string",
+          "default": "",
+          "description": "OpenAI API Key"
+        },
+        "llmgate.geminiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Gemini API Key"
         }
       }
     }

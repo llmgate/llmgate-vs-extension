@@ -2,8 +2,48 @@ import * as vscode from 'vscode';
 import axios from 'axios';
 import { BACKEND_URL } from '../utils/constants';
 import { updateStreamingResponseInWebview } from '../utils/updateResponse';
+import { promptForApiKey } from '../utils/promptForApiKey';
 
-export async function handleSubmit(systemPrompt: string, userPrompts: string[], maxTokens: number, temperature: number, llmProvider: string, llmModel: string, apiKey: string, panel: vscode.WebviewPanel) {
+export async function handleSubmit(systemPrompt: string, userPrompts: string[], maxTokens: number, temperature: number, llmProvider: string, llmModel: string, panel: vscode.WebviewPanel) {
+    // Check if API key is set
+    const config = vscode.workspace.getConfiguration('llmgate');
+    // let llmgateAPiKey = config.get<string>('apiKey');
+    let openaiApiKey = config.get<string>('openaiKey');
+    let geminiKey = config.get<string>('geminiKey');
+
+    var apiKey: string | undefined = undefined;
+    var isExternalLLMKey = true;
+    if (llmProvider === "OpenAI") {
+        if (!openaiApiKey) {
+            apiKey = await promptForApiKey(llmProvider);
+        } else {
+            apiKey = openaiApiKey;
+        }
+    } else if (llmProvider === "Gemini") {
+        if (!geminiKey) {
+            apiKey = await promptForApiKey(llmProvider);
+        } else {
+            apiKey = geminiKey;
+        }
+    }
+
+    // if (apiKey === undefined) {
+    //     // use llmgate key
+    //     isExternalLLMKey = false;
+    //     if (!llmgateAPiKey) {
+    //         // if neither of them is set try to get llmgate key
+    //         apiKey = await promptForApiKey("");   
+    //     } else {
+    //         apiKey = llmgateAPiKey;
+    //     }
+    // }
+
+    if (apiKey === undefined) {
+        // if still undefined show error
+        vscode.window.showInformationMessage(`Please set up an API key.`);
+        return;
+    }
+    
     await vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
         title: "Running..",
@@ -18,7 +58,8 @@ export async function handleSubmit(systemPrompt: string, userPrompts: string[], 
                 temperature, 
                 llmProvider, 
                 llmModel, 
-                apiKey,
+                apiKey ?? "",
+                isExternalLLMKey,
                 (chunk: string) => {
                     updateStreamingResponseInWebview(chunk, panel);
                 }
@@ -29,7 +70,10 @@ export async function handleSubmit(systemPrompt: string, userPrompts: string[], 
     });
 }
 
-async function sendToBackend(systemPrompt: string, userPrompts: string[], maxTokens: number, temperature: number, llmProvider: string, llmModel: string, apiKey: string, onChunk: (chunk: string) => void): Promise<void> {
+async function sendToBackend(systemPrompt: string, userPrompts: string[], maxTokens: number, temperature: number, 
+    llmProvider: string, llmModel: string, 
+    apiKey: string, isExternalLLMKey: boolean,
+    onChunk: (chunk: string) => void): Promise<void> {
     let messages = [
         {
             "role": "system",
@@ -52,11 +96,12 @@ async function sendToBackend(systemPrompt: string, userPrompts: string[], maxTok
         "stream": true
     };
     const url = `${BACKEND_URL}?provider=${llmProvider}`;
-    // const url = `http://localhost:8080/completions?provider=${llmProvider}`;
+
+    const apiKeyHeader = isExternalLLMKey ? 'llm-api-key' : 'key';
     
     const response = await axios.post(url, jsonBody, {
         headers: {
-            'key': `${apiKey}`
+            [apiKeyHeader]: `${apiKey}`
         },
         responseType: 'stream'
     });
