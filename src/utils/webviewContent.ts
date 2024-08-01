@@ -179,7 +179,7 @@ export function getInputWebviewContent(selectedText: string): string {
         }
         .vote-btn {
             margin-right: 8px;
-            font-size: 16px;
+            font-size: 12px;
             background: none;
             border: none;
             cursor: pointer;
@@ -362,8 +362,8 @@ export function getInputWebviewContent(selectedText: string): string {
                     updateStreamingResult();
                     enableExecuteButton();
                     break;
-                case 'updateMetrics':
-                    addCompletedResult(currentStreamingContent, message.metrics);
+                case 'updateMetricsAndRequestBody':
+                    addCompletedResult(currentStreamingContent, message.metrics, message.requestBody, message.llmProvider);
                     clearStreamingResults()
                     currentStreamingContent = '';
                     enableExecuteButton();
@@ -440,8 +440,8 @@ export function getInputWebviewContent(selectedText: string): string {
         }
 
         // Modify the addCompletedResult function
-        function addCompletedResult(content, metrics) {
-            completedResults.unshift({ content, metrics, vote: 0 });
+        function addCompletedResult(content, metrics, requestBody, llmProvider) {
+            completedResults.unshift({ content, metrics, requestBody, llmProvider, vote: 0 });
             updateCompletedResultsDisplay();
             setInitialResultsState(); // Set initial state after updating display
         }

@@ -5,10 +5,12 @@ export function updateStreamingResponseInWebview(response: string, panel: any) {
     });
 }
 
-export function updateMetricsInWebview(metrics: any, panel: any) {
+export function updateMetricsAndRequestBodyInWebview(metrics: any, requestBody: any, llmProvider: any, panel: any) {
     panel.webview.postMessage({ 
-        command: 'updateMetrics', 
-        metrics: metrics 
+        command: 'updateMetricsAndRequestBody', 
+        metrics: metrics,
+        requestBody: requestBody,
+        llmProvider: llmProvider,
     });
 }
 

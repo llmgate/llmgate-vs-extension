@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import axios from 'axios';
 import { BACKEND_URL } from '../utils/constants';
-import { updateErrorInWebview, updateMetricsInWebview, updateStreamingResponseInWebview } from '../utils/updateResponse';
+import { updateErrorInWebview, updateMetricsAndRequestBodyInWebview, updateStreamingResponseInWebview } from '../utils/updateResponse';
 import { promptForApiKey } from '../utils/promptForApiKey';
 
 export async function handleSubmit(systemPrompt: string, userPrompts: string[], maxTokens: number, temperature: number, llmProvider: string, llmModel: string, panel: vscode.WebviewPanel) {
@@ -43,42 +43,7 @@ export async function handleSubmit(systemPrompt: string, userPrompts: string[], 
         vscode.window.showInformationMessage(`Please set up an API key.`);
         return;
     }
-    
-    await vscode.window.withProgress({
-        location: vscode.ProgressLocation.Notification,
-        title: "Running..",
-        cancellable: false
-    }, async (progress) => {
-        progress.report({ increment: 0 });
-        try {
-            await sendToBackend(
-                systemPrompt, 
-                userPrompts, 
-                maxTokens, 
-                temperature, 
-                llmProvider, 
-                llmModel, 
-                apiKey ?? "",
-                isExternalLLMKey,
-                (chunk: string) => {
-                    updateStreamingResponseInWebview(chunk, panel);
-                },
-                (metrics: any) => {
-                    updateMetricsInWebview(metrics, panel);
-                }
-            );
-        } catch (error) {
-            vscode.window.showErrorMessage('Error testing your prompt. Please try again!');
-            updateErrorInWebview(panel);
-        }
-    });
-}
 
-async function sendToBackend(systemPrompt: string, userPrompts: string[], maxTokens: number, temperature: number, 
-    llmProvider: string, llmModel: string, 
-    apiKey: string, isExternalLLMKey: boolean,
-    onChunk: (chunk: string) => void,
-    onMetrics: (metrics: any) => void): Promise<void> {
     let messages = [
         {
             "role": "system",
@@ -93,18 +58,50 @@ async function sendToBackend(systemPrompt: string, userPrompts: string[], maxTok
             }
         );
     }
-    const jsonBody = {
+    const requestBody = {
         "model": llmModel,
         "messages": messages,
         "temperature": Number(temperature),
         "max_tokens": Number(maxTokens),
         "stream": true
     };
+    
+    await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: "Running..",
+        cancellable: false
+    }, async (progress) => {
+        progress.report({ increment: 0 });
+        try {
+            await sendToBackend(
+                requestBody, 
+                llmProvider, 
+                apiKey ?? "",
+                isExternalLLMKey,
+                (chunk: string) => {
+                    updateStreamingResponseInWebview(chunk, panel);
+                },
+                (metrics: any) => {
+                    updateMetricsAndRequestBodyInWebview(metrics, requestBody, llmProvider, panel);
+                }
+            );
+        } catch (error) {
+            vscode.window.showErrorMessage('Error testing your prompt. Please try again!');
+            updateErrorInWebview(panel);
+        }
+    });
+}
+
+async function sendToBackend(requestBody: any, 
+    llmProvider: string,
+    apiKey: string, isExternalLLMKey: boolean,
+    onChunk: (chunk: string) => void,
+    onMetrics: (metrics: any) => void): Promise<void> {
     const url = `${BACKEND_URL}?provider=${llmProvider}`;
 
     const apiKeyHeader = isExternalLLMKey ? 'llm-api-key' : 'key';
     
-    const response = await axios.post(url, jsonBody, {
+    const response = await axios.post(url, requestBody, {
         headers: {
             [apiKeyHeader]: `${apiKey}`
         },
