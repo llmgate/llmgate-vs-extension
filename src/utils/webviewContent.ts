@@ -174,6 +174,20 @@ export function getInputWebviewContent(selectedText: string): string {
             font-size: 12px;
             color: var(--vscode-descriptionForeground);
         }
+        .result-votes {
+            margin-top: 8px;
+        }
+        .vote-btn {
+            margin-right: 8px;
+            font-size: 16px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            opacity: 0.5;
+        }
+        .vote-btn.active {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -384,8 +398,21 @@ export function getInputWebviewContent(selectedText: string): string {
                     Latency: \${nanoToMilliseconds(result.metrics.latency).toFixed(2)} ms, 
                     Cost: $\${result.metrics.cost.toFixed(6)}
                 </div>
+                <div class="result-votes">
+                    <button onclick="vote(\${index}, 1)" class="vote-btn \${result.vote === 1 ? 'active' : ''}">👍</button>
+                    <button onclick="vote(\${index}, -1)" class="vote-btn \${result.vote === -1 ? 'active' : ''}">👎</button>
+                </div>
             </div>
             \`).join('');
+        }
+
+        function vote(index, value) {
+            if (completedResults[index].vote === value) {
+                completedResults[index].vote = 0; // Reset vote if clicking the same button
+            } else {
+                completedResults[index].vote = value;
+            }
+            updateCompletedResultsDisplay(); // Refresh the display to show updated votes
         }
 
         function toggleResult(index) {
@@ -414,7 +441,7 @@ export function getInputWebviewContent(selectedText: string): string {
 
         // Modify the addCompletedResult function
         function addCompletedResult(content, metrics) {
-            completedResults.unshift({ content, metrics });
+            completedResults.unshift({ content, metrics, vote: 0 });
             updateCompletedResultsDisplay();
             setInitialResultsState(); // Set initial state after updating display
         }
