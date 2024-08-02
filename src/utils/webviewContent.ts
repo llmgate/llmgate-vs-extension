@@ -174,20 +174,6 @@ export function getInputWebviewContent(selectedText: string): string {
             font-size: 12px;
             color: var(--vscode-descriptionForeground);
         }
-        .result-votes {
-            margin-top: 8px;
-        }
-        .vote-btn {
-            margin-right: 8px;
-            font-size: 12px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            opacity: 0.5;
-        }
-        .vote-btn.active {
-            opacity: 1;
-        }
         #metricsGraph {
             margin-top: 20px;
             border-top: 1px solid var(--vscode-panel-border);
@@ -310,14 +296,6 @@ export function getInputWebviewContent(selectedText: string): string {
                     <div class="graph-section">
                         <h4>Latency Comparison</h4>
                         <div id="latencyComparison"></div>
-                    </div>
-                    <div id="upvotesComparisonContainer" class="graph-section hidden">
-                        <h4>Upvotes Comparison</h4>
-                        <div id="upvotesComparison"></div>
-                    </div>
-                    <div id="downvotesComparisonContainer" class="graph-section hidden">
-                        <h4>Downvotes Comparison</h4>
-                        <div id="downvotesComparison"></div>
                     </div>
                 </div>
             </div>
@@ -472,22 +450,8 @@ export function getInputWebviewContent(selectedText: string): string {
                     Latency: \${nanoToMilliseconds(result.metrics.latency).toFixed(2)} ms, 
                     Cost: $\${result.metrics.cost.toFixed(6)}
                 </div>
-                <div class="result-votes">
-                    <button onclick="vote(\${index}, 1)" class="vote-btn \${result.vote === 1 ? 'active' : ''}">👍</button>
-                    <button onclick="vote(\${index}, -1)" class="vote-btn \${result.vote === -1 ? 'active' : ''}">👎</button>
-                </div>
             </div>
             \`).join('');
-        }
-
-        function vote(index, value) {
-            if (completedResults[index].vote === value) {
-                completedResults[index].vote = 0; // Reset vote if clicking the same button
-            } else {
-                completedResults[index].vote = value;
-            }
-            updateCompletedResultsDisplay(); // Refresh the display to show updated votes
-            updateMetricsGraph();
         }
 
         function toggleResult(index) {
@@ -516,7 +480,7 @@ export function getInputWebviewContent(selectedText: string): string {
 
         // Modify the addCompletedResult function
         function addCompletedResult(content, metrics, requestBody, llmProvider) {
-            completedResults.unshift({ content, metrics, requestBody, llmProvider, vote: 0 });
+            completedResults.unshift({ content, metrics, requestBody, llmProvider });
             updateCompletedResultsDisplay();
             setInitialResultsState(); // Set initial state after updating display
             updateMetricsGraph();
@@ -549,17 +513,9 @@ export function getInputWebviewContent(selectedText: string): string {
             const metricsGraph = document.getElementById('metricsGraph');
             const costComparisonElement = document.getElementById('costComparison');
             const latencyComparisonElement = document.getElementById('latencyComparison');
-            const upvotesComparisonElement = document.getElementById('upvotesComparison');
-            const downvotesComparisonElement = document.getElementById('downvotesComparison');
-
-            const upvotesComparisonContainerElement = document.getElementById('upvotesComparisonContainer');
-            const downvotesComparisonContainerElement = document.getElementById('downvotesComparisonContainer');
-
 
             let totalCost = 0;
             let totalLatency = 0;
-            let totalUpvotes = 0;
-            let totalDownvotes = 0;
             let completionCount = completedResults.length;
 
             metricsData = {};
@@ -567,42 +523,20 @@ export function getInputWebviewContent(selectedText: string): string {
             completedResults.forEach(result => {
                 totalCost += result.metrics.cost;
                 totalLatency += nanoToMilliseconds(result.metrics.latency);
-                if (result.vote === 1) totalUpvotes++;
-                if (result.vote === -1) totalDownvotes++;
-
+            
                 const provider = result.llmProvider;
                 const model = result.requestBody.model;
                 const key = \`\${provider}-\${model}\`;
 
                 if (!metricsData[key]) {
-                    metricsData[key] = { cost: 0, latency: 0, upvotes: 0, downvotes: 0, count: 0 };
+                    metricsData[key] = { cost: 0, latency: 0 };
                 }
                 metricsData[key].cost += result.metrics.cost;
                 metricsData[key].latency += nanoToMilliseconds(result.metrics.latency);
-                if (result.vote === 1) {
-                    metricsData[key].upvotes++;
-                } else if (result.vote === -1) { 
-                    metricsData[key].downvotes++; 
-                }
-                metricsData[key].count++;
             });
 
             createComparativeBarChart(costComparisonElement, metricsData, 'cost');
             createComparativeBarChart(latencyComparisonElement, metricsData, 'latency');
-
-            if (totalUpvotes > 0) {
-                upvotesComparisonContainerElement.classList.remove('hidden');
-                createComparativeBarChart(upvotesComparisonElement, metricsData, 'upvotes');
-            } else {
-                upvotesComparisonContainerElement.classList.add('hidden');
-            }
-
-            if (totalDownvotes > 0) {
-                downvotesComparisonContainerElement.classList.remove('hidden');
-                createComparativeBarChart(downvotesComparisonElement, metricsData, 'downvotes');
-            } else {
-                downvotesComparisonContainerElement.classList.add('hidden');
-            }
 
             // Show the metrics graph if it's hidden
             if (metricsGraph.classList.contains('hidden')) {
@@ -620,11 +554,6 @@ export function getInputWebviewContent(selectedText: string): string {
                         valueA = a[1][metric] / a[1].count;
                         valueB = b[1][metric] / b[1].count;
                         break;
-                    case 'upvotes':
-                    case 'downvotes':
-                        valueA = a[1][metric];
-                        valueB = b[1][metric];
-                        break;
                 }
                 return valueB - valueA;
             });
@@ -634,9 +563,6 @@ export function getInputWebviewContent(selectedText: string): string {
                     case 'cost':
                     case 'latency':
                         return item[metric] / item.count;
-                    case 'upvotes':
-                    case 'downvotes':
-                        return item[metric];
                 }
             }));
 
@@ -650,11 +576,6 @@ export function getInputWebviewContent(selectedText: string): string {
                     case 'latency':
                         value = (item[metric] / item.count).toFixed(2);
                         unit = 'ms';
-                        break;
-                    case 'upvotes':
-                    case 'downvotes':
-                        value = item[metric];
-                        unit = '';
                         break;
                 }
                 const percentage = (value / maxValue) * 100;
