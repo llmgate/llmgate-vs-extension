@@ -1,7 +1,7 @@
 # LLMGate Prompt Lab
 
 <p align="center">
-  <img src="https://llmgate.github.io/assets/logo.png" alt="LLMGate Logo" width="200"/>
+  <img src="https://llmgate.github.io/assets/logo.png" alt="LLMGate Logo" width="100"/>
 </p>
 
 <p align="center">
