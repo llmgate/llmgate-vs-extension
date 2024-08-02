@@ -188,6 +188,34 @@ export function getInputWebviewContent(selectedText: string): string {
         .vote-btn.active {
             opacity: 1;
         }
+            #metricsGraph {
+            margin-top: 20px;
+            border-top: 1px solid var(--vscode-panel-border);
+            padding-top: 10px;
+        }
+        #metricsGraph.hidden {
+            display: none;
+        }
+        .graph-section {
+            margin-bottom: 15px;
+        }
+        .graph-section h4 {
+            margin-bottom: 5px;
+        }
+        .breakdown-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 2px;
+        }
+        .breakdown-bar {
+            background-color: var(--vscode-progressBar-background);
+            height: 4px;
+            margin-top: 2px;
+        }
+        .hidden {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
@@ -248,6 +276,24 @@ export function getInputWebviewContent(selectedText: string): string {
                 </div>
             </div>
             <button id="executeButton">Execute</button>
+            <div id="metricsGraph" class="hidden">
+            <div class="graph-section">
+                <h4>Total Cost: $<span id="totalCost">0.00</span></h4>
+                <div id="costBreakdown"></div>
+            </div>
+            <div class="graph-section">
+                <h4>Avg. Latency: <span id="avgLatency">0</span> ms</h4>
+                <div id="latencyBreakdown"></div>
+            </div>
+            <div id="upvotesSection" class="hidden graph-section">
+                <h4>Upvotes: <span id="totalUpvotes">0</span></h4>
+                <div id="upvotesBreakdown"></div>
+            </div>
+            <div id="downvotesSection" class="hidden graph-section">
+                <h4>Downvotes: <span id="totalDownvotes">0</span></h4>
+                <div id="downvotesBreakdown"></div>
+            </div>
+        </div>
         </div>
         <div id="responseSection">
             <div class="title-header">Completions</div>
@@ -265,6 +311,7 @@ export function getInputWebviewContent(selectedText: string): string {
         const modelSelect = document.getElementById('modelSelect');
 
         let completionResults = [];
+        let metricsData = {};
 
         function addNewResult(content, metrics) {
             completionResults.unshift({ content, metrics });
@@ -413,6 +460,7 @@ export function getInputWebviewContent(selectedText: string): string {
                 completedResults[index].vote = value;
             }
             updateCompletedResultsDisplay(); // Refresh the display to show updated votes
+            updateMetricsGraph();
         }
 
         function toggleResult(index) {
@@ -444,6 +492,7 @@ export function getInputWebviewContent(selectedText: string): string {
             completedResults.unshift({ content, metrics, requestBody, llmProvider, vote: 0 });
             updateCompletedResultsDisplay();
             setInitialResultsState(); // Set initial state after updating display
+            updateMetricsGraph();
         }
 
         function clearStreamingResults() {
@@ -468,6 +517,113 @@ export function getInputWebviewContent(selectedText: string): string {
                 </div>
             \`).join('');
         }
+
+        function updateMetricsGraph() {
+            const metricsGraph = document.getElementById('metricsGraph');
+            const totalCostElement = document.getElementById('totalCost');
+            const avgLatencyElement = document.getElementById('avgLatency');
+            const costBreakdownElement = document.getElementById('costBreakdown');
+            const latencyBreakdownElement = document.getElementById('latencyBreakdown');
+            const upvotesSectionElement = document.getElementById('upvotesSection');
+            const downvotesSectionElement = document.getElementById('downvotesSection');
+            const totalUpvotesElement = document.getElementById('totalUpvotes');
+            const totalDownvotesElement = document.getElementById('totalDownvotes');
+            const upvotesBreakdownElement = document.getElementById('upvotesBreakdown');
+            const downvotesBreakdownElement = document.getElementById('downvotesBreakdown');
+
+            let totalCost = 0;
+            let totalLatency = 0;
+            let totalUpvotes = 0;
+            let totalDownvotes = 0;
+            let completionCount = completedResults.length;
+
+            metricsData = {};
+
+            completedResults.forEach(result => {
+                totalCost += result.metrics.cost;
+                totalLatency += nanoToMilliseconds(result.metrics.latency);
+                if (result.vote === 1) totalUpvotes++;
+                if (result.vote === -1) totalDownvotes++;
+
+                const provider = result.llmProvider;
+                const model = result.requestBody.model;
+                const key = \`\${provider}-\${model}\`;
+
+                if (!metricsData[key]) {
+                    metricsData[key] = { cost: 0, latency: 0, upvotes: 0, downvotes: 0, count: 0 };
+                }
+                metricsData[key].cost += result.metrics.cost;
+                metricsData[key].latency += nanoToMilliseconds(result.metrics.latency);
+                if (result.vote === 1) {
+                    metricsData[key].upvotes++;
+                } else if (result.vote === -1) { 
+                    metricsData[key].downvotes++; 
+                }
+                metricsData[key].count++;
+            });
+
+            totalCostElement.textContent = totalCost.toFixed(6);
+            avgLatencyElement.textContent = (totalLatency / completionCount).toFixed(2);
+            totalUpvotesElement.textContent = totalUpvotes;
+            totalDownvotesElement.textContent = totalDownvotes;
+
+            updateBreakdown(costBreakdownElement, metricsData, 'cost');
+            updateBreakdown(latencyBreakdownElement, metricsData, 'latency');
+
+            if (totalUpvotes > 0) {
+                upvotesSectionElement.classList.remove('hidden');
+                updateBreakdown(upvotesBreakdownElement, metricsData, 'upvotes');
+            } else {
+                upvotesSectionElement.classList.add('hidden');
+            }
+
+            if (totalDownvotes > 0) {
+                downvotesSectionElement.classList.remove('hidden');
+                updateBreakdown(downvotesBreakdownElement, metricsData, 'downvotes');
+            } else {
+                downvotesSectionElement.classList.add('hidden');
+            }
+
+            // Show the metrics graph if it's hidden
+            if (metricsGraph.classList.contains('hidden')) {
+                metricsGraph.classList.remove('hidden');
+            }
+        }
+
+        function updateBreakdown(element, data, metric) {
+            const total = Object.values(data).reduce((sum, item) => sum + item[metric], 0);
+            let html = '';
+
+            Object.entries(data).forEach(([key, item]) => {
+                let value, unit;
+                switch (metric) {
+                    case 'cost':
+                        value = item[metric].toFixed(6);
+                        unit = '$';
+                        break;
+                    case 'latency':
+                        value = (item[metric] / item.count).toFixed(2);
+                        unit = 'ms';
+                        break;
+                    case 'upvotes':
+                    case 'downvotes':
+                        value = item[metric];
+                        unit = '';
+                        break;
+                }
+                const percentage = total > 0 ? ((item[metric] / total) * 100).toFixed(2) : '0.00';
+                html += \`
+                    <div class="breakdown-item">
+                        <span>\${key}: \${unit}\${value}\${unit === 'ms' ? ' ms' : ''}</span>
+                        <span>\${percentage}%</span>
+                    </div>
+                    <div class="breakdown-bar" style="width: \${percentage}%"></div>
+                \`;
+            });
+
+            element.innerHTML = html;
+        }
+
     </script>
 </body>
 </html>`;
