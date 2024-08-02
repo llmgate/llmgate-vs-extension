@@ -188,7 +188,7 @@ export function getInputWebviewContent(selectedText: string): string {
         .vote-btn.active {
             opacity: 1;
         }
-            #metricsGraph {
+        #metricsGraph {
             margin-top: 20px;
             border-top: 1px solid var(--vscode-panel-border);
             padding-top: 10px;
@@ -210,11 +210,35 @@ export function getInputWebviewContent(selectedText: string): string {
         }
         .breakdown-bar {
             background-color: var(--vscode-progressBar-background);
-            height: 4px;
+            height: 8px;
             margin-top: 2px;
+            margin-bottom: 8px;
+            transition: width 0.3s ease-in-out;
         }
         .hidden {
             display: none !important;
+        }
+        .graphs-container {
+            max-height: 45vh;
+            overflow-y: auto;
+            padding-right: 10px;
+            padding-bottom: 20px;
+        }
+        /* Styles for WebKit browsers (Chrome, Safari) */
+        .graphs-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .graphs-container::-webkit-scrollbar-track {
+            background: var(--vscode-scrollbarSlider-background);
+        }
+        .graphs-container::-webkit-scrollbar-thumb {
+            background-color: var(--vscode-scrollbarSlider-hoverBackground);
+            border-radius: 4px;
+        }
+        /* Styles for Firefox */
+        .graphs-container {
+            scrollbar-width: thin;
+            scrollbar-color: var(--vscode-scrollbarSlider-hoverBackground) var(--vscode-scrollbarSlider-background);
         }
     </style>
 </head>
@@ -277,23 +301,26 @@ export function getInputWebviewContent(selectedText: string): string {
             </div>
             <button id="executeButton">Execute</button>
             <div id="metricsGraph" class="hidden">
-            <div class="graph-section">
-                <h4>Total Cost: $<span id="totalCost">0.00</span></h4>
-                <div id="costBreakdown"></div>
+                <div class="title-header">Analysis</div>
+                <div class="graphs-container">
+                    <div class="graph-section">
+                        <h4>Cost Comparison</h4>
+                        <div id="costComparison"></div>
+                    </div>
+                    <div class="graph-section">
+                        <h4>Latency Comparison</h4>
+                        <div id="latencyComparison"></div>
+                    </div>
+                    <div id="upvotesComparisonContainer" class="graph-section hidden">
+                        <h4>Upvotes Comparison</h4>
+                        <div id="upvotesComparison"></div>
+                    </div>
+                    <div id="downvotesComparisonContainer" class="graph-section hidden">
+                        <h4>Downvotes Comparison</h4>
+                        <div id="downvotesComparison"></div>
+                    </div>
+                </div>
             </div>
-            <div class="graph-section">
-                <h4>Avg. Latency: <span id="avgLatency">0</span> ms</h4>
-                <div id="latencyBreakdown"></div>
-            </div>
-            <div id="upvotesSection" class="hidden graph-section">
-                <h4>Upvotes: <span id="totalUpvotes">0</span></h4>
-                <div id="upvotesBreakdown"></div>
-            </div>
-            <div id="downvotesSection" class="hidden graph-section">
-                <h4>Downvotes: <span id="totalDownvotes">0</span></h4>
-                <div id="downvotesBreakdown"></div>
-            </div>
-        </div>
         </div>
         <div id="responseSection">
             <div class="title-header">Completions</div>
@@ -520,16 +547,14 @@ export function getInputWebviewContent(selectedText: string): string {
 
         function updateMetricsGraph() {
             const metricsGraph = document.getElementById('metricsGraph');
-            const totalCostElement = document.getElementById('totalCost');
-            const avgLatencyElement = document.getElementById('avgLatency');
-            const costBreakdownElement = document.getElementById('costBreakdown');
-            const latencyBreakdownElement = document.getElementById('latencyBreakdown');
-            const upvotesSectionElement = document.getElementById('upvotesSection');
-            const downvotesSectionElement = document.getElementById('downvotesSection');
-            const totalUpvotesElement = document.getElementById('totalUpvotes');
-            const totalDownvotesElement = document.getElementById('totalDownvotes');
-            const upvotesBreakdownElement = document.getElementById('upvotesBreakdown');
-            const downvotesBreakdownElement = document.getElementById('downvotesBreakdown');
+            const costComparisonElement = document.getElementById('costComparison');
+            const latencyComparisonElement = document.getElementById('latencyComparison');
+            const upvotesComparisonElement = document.getElementById('upvotesComparison');
+            const downvotesComparisonElement = document.getElementById('downvotesComparison');
+
+            const upvotesComparisonContainerElement = document.getElementById('upvotesComparisonContainer');
+            const downvotesComparisonContainerElement = document.getElementById('downvotesComparisonContainer');
+
 
             let totalCost = 0;
             let totalLatency = 0;
@@ -562,26 +587,21 @@ export function getInputWebviewContent(selectedText: string): string {
                 metricsData[key].count++;
             });
 
-            totalCostElement.textContent = totalCost.toFixed(6);
-            avgLatencyElement.textContent = (totalLatency / completionCount).toFixed(2);
-            totalUpvotesElement.textContent = totalUpvotes;
-            totalDownvotesElement.textContent = totalDownvotes;
-
-            updateBreakdown(costBreakdownElement, metricsData, 'cost');
-            updateBreakdown(latencyBreakdownElement, metricsData, 'latency');
+            createComparativeBarChart(costComparisonElement, metricsData, 'cost');
+            createComparativeBarChart(latencyComparisonElement, metricsData, 'latency');
 
             if (totalUpvotes > 0) {
-                upvotesSectionElement.classList.remove('hidden');
-                updateBreakdown(upvotesBreakdownElement, metricsData, 'upvotes');
+                upvotesComparisonContainerElement.classList.remove('hidden');
+                createComparativeBarChart(upvotesComparisonElement, metricsData, 'upvotes');
             } else {
-                upvotesSectionElement.classList.add('hidden');
+                upvotesComparisonContainerElement.classList.add('hidden');
             }
 
             if (totalDownvotes > 0) {
-                downvotesSectionElement.classList.remove('hidden');
-                updateBreakdown(downvotesBreakdownElement, metricsData, 'downvotes');
+                downvotesComparisonContainerElement.classList.remove('hidden');
+                createComparativeBarChart(downvotesComparisonElement, metricsData, 'downvotes');
             } else {
-                downvotesSectionElement.classList.add('hidden');
+                downvotesComparisonContainerElement.classList.add('hidden');
             }
 
             // Show the metrics graph if it's hidden
@@ -590,15 +610,41 @@ export function getInputWebviewContent(selectedText: string): string {
             }
         }
 
-        function updateBreakdown(element, data, metric) {
-            const total = Object.values(data).reduce((sum, item) => sum + item[metric], 0);
+        function createComparativeBarChart(element, data, metric) {
             let html = '';
+            const sortedData = Object.entries(data).sort((a, b) => {
+                let valueA, valueB;
+                switch (metric) {
+                    case 'cost':
+                    case 'latency':
+                        valueA = a[1][metric] / a[1].count;
+                        valueB = b[1][metric] / b[1].count;
+                        break;
+                    case 'upvotes':
+                    case 'downvotes':
+                        valueA = a[1][metric];
+                        valueB = b[1][metric];
+                        break;
+                }
+                return valueB - valueA;
+            });
 
-            Object.entries(data).forEach(([key, item]) => {
+            const maxValue = Math.max(...sortedData.map(([_, item]) => {
+                switch (metric) {
+                    case 'cost':
+                    case 'latency':
+                        return item[metric] / item.count;
+                    case 'upvotes':
+                    case 'downvotes':
+                        return item[metric];
+                }
+            }));
+
+            sortedData.forEach(([key, item]) => {
                 let value, unit;
                 switch (metric) {
                     case 'cost':
-                        value = item[metric].toFixed(6);
+                        value = (item[metric] / item.count).toFixed(6);
                         unit = '$';
                         break;
                     case 'latency':
@@ -611,11 +657,10 @@ export function getInputWebviewContent(selectedText: string): string {
                         unit = '';
                         break;
                 }
-                const percentage = total > 0 ? ((item[metric] / total) * 100).toFixed(2) : '0.00';
+                const percentage = (value / maxValue) * 100;
                 html += \`
                     <div class="breakdown-item">
-                        <span>\${key}: \${unit}\${value}\${unit === 'ms' ? ' ms' : ''}</span>
-                        <span>\${percentage}%</span>
+                        <span>\${key}: \${unit === 'ms' ? '' : unit}\${value}\${unit === 'ms' ? ' ms' : ''}</span>
                     </div>
                     <div class="breakdown-bar" style="width: \${percentage}%"></div>
                 \`;
