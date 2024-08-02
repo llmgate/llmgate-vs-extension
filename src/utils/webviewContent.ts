@@ -50,6 +50,7 @@ export function getInputWebviewContent(selectedText: string): string {
         }
         textarea {
             min-height: 24px;
+            max-height: 90px;
             resize: vertical;
             overflow: auto;
         }
@@ -454,7 +455,8 @@ export function getInputWebviewContent(selectedText: string): string {
 
         function autoResizeTextarea(textarea) {
             textarea.style.height = 'auto';
-            textarea.style.height = textarea.scrollHeight + 'px';
+            const newHeight = Math.min(textarea.scrollHeight, 90);
+            textarea.style.height = newHeight + 'px';
         }
             
         function setupAutoResizeTextareas() {
