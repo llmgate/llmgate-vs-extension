@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { getInputWebviewContent } from '../utils/webviewContent';
 import { handleRunTestCases, handleSubmit } from '../handlers/handleSubmit';
+const path = require('path');
 
 export async function runTest() {
     const editor = vscode.window.activeTextEditor;
@@ -13,10 +14,12 @@ export async function runTest() {
     // Create and show input panel
     const panel = vscode.window.createWebviewPanel(
         'llmgateInput',
-        'Prompt Testing',
+        'Prompt Lab',
         vscode.ViewColumn.One,
-        { enableScripts: true }
+        { enableScripts: true },
     );
+
+    panel.iconPath = vscode.Uri.file(path.join(__dirname, '..', 'resources', 'logo.png'));
 
     panel.webview.html = getInputWebviewContent(selectedText);
 

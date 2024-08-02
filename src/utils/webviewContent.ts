@@ -1,5 +1,5 @@
 export function getInputWebviewContent(selectedText: string): string {
-    const openAIModels = ['gpt-4o-mini', 'gpt-4o', 'gpt-4', 'gpt-4-turbo-preview', 'gpt-3.5-turbo'];
+    const openAIModels = ['gpt-4o-mini', 'gpt-4o', 'gpt-4'];
     const geminiModels = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.0-pro'];
 
     return `<!DOCTYPE html>
@@ -386,6 +386,7 @@ export function getInputWebviewContent(selectedText: string): string {
                         <select id="providerSelect">
                             <option value="OpenAI">OpenAI</option>
                             <option value="Gemini">Gemini</option>
+                            <option value="" disabled>More Options in the next release</option>
                         </select>
                     </div>
                     <div class="param-group">
@@ -434,7 +435,7 @@ export function getInputWebviewContent(selectedText: string): string {
             </div>
             <button id="executeButton">Execute</button>
             <div id="metricsGraph" class="hidden">
-                <div class="title-header">Analysis</div>
+                <div class="title-header">Model Comparision Analysis</div>
                 <div class="graphs-container">
                     <div class="graph-section">
                         <h4>Cost Comparison</h4>
@@ -448,7 +449,7 @@ export function getInputWebviewContent(selectedText: string): string {
             </div>
         </div>
         <div id="responseSection">
-            <div class="title-header">Completions</div>
+            <div class="title-header">Playground</div>
             <div id="streamingResult"></div>
             <div id="lastCompletedResult" class="hidden"></div>
             <div id="testCasesContainer"></div>

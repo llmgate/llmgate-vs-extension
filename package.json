@@ -16,7 +16,7 @@
     "commands": [
       {
         "command": "llmgate.runTest",
-        "title": "LLMGate: Prompt Testing"
+        "title": "LLMGate Prompt Lab"
       }
     ],
     "configuration": {
