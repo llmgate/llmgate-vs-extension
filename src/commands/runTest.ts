@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { getInputWebviewContent } from '../utils/webviewContent';
-import { handleSubmit } from '../handlers/handleSubmit';
+import { handleRunTestCases, handleSubmit } from '../handlers/handleSubmit';
 
 export async function runTest() {
     const editor = vscode.window.activeTextEditor;
@@ -26,6 +26,9 @@ export async function runTest() {
             switch (message.command) {
                 case 'execute':
                     await handleSubmit(message.systemPrompt, message.userPrompts, message.maxTokens as number, message.temperature as number,  message.llmProvider, message.llmModel, panel);
+                    return;
+                case 'runtestcases':
+                    await handleRunTestCases(message.systemPrompt, message.testCases, message.maxTokens as number, message.temperature as number,  message.llmProvider, message.llmModel, panel);
                     return;
             }
         },

@@ -222,15 +222,35 @@ export function getInputWebviewContent(selectedText: string): string {
             scrollbar-color: var(--vscode-scrollbarSlider-hoverBackground) var(--vscode-scrollbarSlider-background);
         }
         .test-case {
+            position: relative;
             border: 1px solid var(--vscode-panel-border);
             margin-top: 8px;
             padding: 8px;
         }
+        .delete-test-case-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            padding: 2px 6px;
+            font-size: 11px;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+        .delete-test-case-btn:hover {
+            opacity: 1;
+        }
         .test-case-header {
+            margin-right: 30px; /* Make space for the delete button */
+        }
+        .test-cases-title {
+            margin: 0;
+        }
+        .test-cases-buttons {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 4px;
+            gap: 8px;
         }
         .delete-test-case-btn {
             background-color: var(--vscode-button-background);
@@ -314,6 +334,44 @@ export function getInputWebviewContent(selectedText: string): string {
             color: var(--vscode-errorForeground);
             font-size: 12px;
             margin-top: 4px;
+        }
+        .test-result {
+            margin-top: 8px;
+        }
+        .response-message {
+            margin-bottom: 8px;
+            border-left: 3px solid var(--vscode-textLink-foreground);
+            padding-left: 8px;
+        }
+        .response-message .message-header {
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+        .toggle-message {
+            font-size: 10px;
+            margin-top: 4px;
+            background-color: transparent;
+            border: none;
+            color: var(--vscode-textLink-foreground);
+            cursor: pointer;
+            padding: 0;
+        }
+        .toggle-message:hover {
+            text-decoration: underline;
+        }
+        .test-case-status {
+            position: absolute;
+            top: 8px;
+            right: 40px; /* Position it to the left of the delete button */
+        }
+        .status-running {
+            color: var(--vscode-progressBar-background);
+        }
+        .status-success {
+            color: var(--vscode-testing-iconPassed);
+        }
+        .status-failure {
+            color: var(--vscode-testing-iconFailed);
         }
     </style>
 </head>
@@ -499,29 +557,6 @@ export function getInputWebviewContent(selectedText: string): string {
             lastCompletedResultConatainer.classList.add('hidden');
         });
 
-        window.addEventListener('message', event => {
-            const message = event.data;
-            switch (message.command) {
-                case 'appendStreamingResults':
-                    currentStreamingContent += message.content;
-                    updateStreamingResult();
-                    break;
-                case 'updateMetricsAndRequestBody':
-                    addCompletedResult(currentStreamingContent, message.metrics, message.requestBody, message.llmProvider);
-                    clearStreamingResults()
-                    currentStreamingContent = '';
-                    enableExecuteButton();
-                    // show lastCompletedResultConatainer
-                    lastCompletedResultConatainer.classList.remove('hidden');
-                    break;
-                case 'error':
-                    enableExecuteButton();
-                    // show lastCompletedResultConatainer
-                    lastCompletedResultConatainer.classList.remove('hidden');
-                    break;
-            }
-        });
-
         function updateStreamingResult() {
            document.getElementById('streamingResult').innerHTML = \`
                 <div class="completion-result">
@@ -568,8 +603,7 @@ export function getInputWebviewContent(selectedText: string): string {
                 if (selectedKeywords.size === 0) {
                     showKeywordError("Please highlight and select keywords from the content above.");
                 } else {
-                    const tempKeywords = new Set(selectedKeywords);
-                    addTest('keywords', userMessages, tempKeywords);
+                    addTest('keywords', userMessages, selectedKeywords);
                     selectedKeywords.clear();
                     updateSelectedKeywordsDisplay();
                 }
@@ -584,8 +618,8 @@ export function getInputWebviewContent(selectedText: string): string {
         }
 
         function handleTextSelection() {
-           const selection = window.getSelection();
-            const selectedText = selection.toString().trim();
+            const selection = window.getSelection();
+            const selectedText = selection.toString().trim().toLowerCase();
             if (selectedText) {
                 selectedKeywords.add(selectedText);
                 updateSelectedKeywordsDisplay();
@@ -617,7 +651,8 @@ export function getInputWebviewContent(selectedText: string): string {
         }
 
         function addTest(type, userMessages, keywords) {
-            testCases.push({ type, userMessages, keywords });
+            const uniqueId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+            testCases.push({ id: uniqueId, type, userMessages, keywords: Array.from(keywords) });
             updateTestCasesDisplay();
         }
 
@@ -723,7 +758,15 @@ export function getInputWebviewContent(selectedText: string): string {
         function updateTestCasesDisplay() {
             const testCasesContainer = document.getElementById('testCasesContainer');
             if (testCases.length > 0) {
-                testCasesContainer.innerHTML = '<h4>Test Cases</h4>';
+                testCasesContainer.innerHTML = \`
+                    <div class="test-cases-header">
+                        <h4 class="test-cases-title">Test Cases</h4>
+                        <div class="test-cases-buttons">
+                            <button id="runTestCases" class="test-cases-button">Run</button>
+                            <button id="saveTestCases" class="test-cases-button">Save</button>
+                        </div>
+                    </div>
+                \`;
             } else {
                 testCasesContainer.innerHTML = '';
             }           
@@ -747,7 +790,7 @@ export function getInputWebviewContent(selectedText: string): string {
                                 <div class="message-full hidden">
                                     \${content}
                                 </div>
-                                <button class="toggle-message" data-index="\${actualIndex}-\${msgIndex}">
+                                <button class="toggle-message" data-id="\${testCase.id}" data-index="\${actualIndex}-\${msgIndex}">
                                     Show more
                                 </button>
                             \` : ''}
@@ -756,10 +799,11 @@ export function getInputWebviewContent(selectedText: string): string {
                 }).join('');
 
                 testCasesContainer.innerHTML += \`
-                    <div class="test-case">
+                    <div class="test-case" id="test-case-\${testCase.id}">
                         <div class="test-case-header">
                             <h5>Test Case \${testCases.length - index} [\${testTypeName}]</h5>
-                            <button class="delete-test-case-btn" onclick="deleteTestCase(\${actualIndex})">Delete</button>
+                            <span class="test-case-status"></span>
+                            <button class="delete-test-case-btn"onclick="deleteTestCase('\${testCase.id}')">del</button>
                         </div>
                         <div class="user-messages-container">\${userMessagesHtml}</div>
                         <div class="test-case-content">\${testCase.keywords !== null ? \`Keywords: \${Array.from(testCase.keywords).join(', ')}\` : ''}</div>
@@ -770,7 +814,8 @@ export function getInputWebviewContent(selectedText: string): string {
             // Add event listeners for toggle buttons
             document.querySelectorAll('.toggle-message').forEach(button => {
                 button.addEventListener('click', function() {
-                    const [testIndex, messageIndex] = this.dataset.index.split('-');
+                    const testId = this.dataset.id;
+                    const messageIndex = this.dataset.msgIndex;
                     const messageContainer = this.closest('.user-message');
                     const preview = messageContainer.querySelector('.message-preview');
                     const full = messageContainer.querySelector('.message-full');
@@ -786,12 +831,160 @@ export function getInputWebviewContent(selectedText: string): string {
                     }
                 });
             });
+
+            const runButton = document.getElementById('runTestCases');
+            const saveButton = document.getElementById('saveTestCases');
+
+            if (runButton) {
+                const systemMessage = systemMessageElement.value;
+                runButton.addEventListener('click', () => {
+                    vscode.postMessage({
+                        command: 'runtestcases',
+                        systemPrompt: systemMessage,
+                        testCases: testCases,
+                        maxTokens: document.getElementById('maxTokens').value,
+                        temperature: document.getElementById('temperatureInput').value,
+                        llmProvider: providerSelect.value,
+                        llmModel: modelSelect.value
+                    });
+                });
+            }
+
+            if (saveButton) {
+                saveButton.addEventListener('click', () => {
+                    showKeywordError("Available in the next release..");
+                    setTimeout(() => {
+                        hideKeywordError();
+                    }, 1500);
+                });
+            }
         }
 
+        function updateTestCaseStatus(id, testResult) {
+            const testCase = document.getElementById(\`test-case-\${id}\`);
+            const status = testResult.passed ? 'success' : 'failure';
+            if (testCase) {
+                const statusElement = testCase.querySelector('.test-case-status');
+                statusElement.className = 'test-case-status';
+        
+                // Clear previous results
+                const previousResult = testCase.querySelector('.test-result');
+                if (previousResult) {
+                    previousResult.remove();
+                }
+        
+                switch(status) {
+                    case 'running':
+                        statusElement.innerHTML = '[running..]';
+                        statusElement.classList.add('status-running');
+                        break;
+                    case 'success':
+                        statusElement.innerHTML = '[succeed]';
+                        statusElement.classList.add('status-success');
+                        break;
+                    case 'failure':
+                        statusElement.innerHTML = '[failed]';
+                        statusElement.classList.add('status-failure');
+                        break;
+                }
+
+
+                if (status === 'success) {
+                    const cost = testResult.cost || 0;
+                    const latency = testResult.latency || 0;
+                    // todo: this should also update graph.. 
+                }
+        
+                // Add response content
+                const resultElement = document.createElement('div');
+                resultElement.classList.add('test-result');
+                const responseContent = testResult.response || '';
+                const hasMoreCharacters = responseContent.length > 100;
+                const previewContent = hasMoreCharacters ? responseContent.slice(0, 100) + '...' : responseContent;
+
+                resultElement.innerHTML = \`
+                    <div class="response-message">
+                        <div class="message-header">Response:</div>
+                        <div class="\${hasMoreCharacters ? 'message-preview' : 'message-full'}">
+                            \${previewContent}
+                        </div>
+                        \${hasMoreCharacters ? \`
+                            <div class="message-full hidden">
+                                \${responseContent}
+                            </div>
+                            <button class="toggle-message">
+                                Show more
+                            </button>
+                        \` : ''}
+                    </div>
+                \`;
+                if (testResult.error) {
+                    resultElement.innerHTML += \`
+                        <div class="error-message">\${testResult.error}</div>
+                    \`;
+                }
+
+                // Insert the result after the keywords
+                const keywordsElement = testCase.querySelector('.test-case-content');
+                keywordsElement.insertAdjacentElement('afterend', resultElement);
+
+                // Add event listener for toggle button
+                const toggleButton = resultElement.querySelector('.toggle-message');
+                if (toggleButton) {
+                    toggleButton.addEventListener('click', function() {
+                        const messageContainer = this.closest('.response-message');
+                        const preview = messageContainer.querySelector('.message-preview');
+                        const full = messageContainer.querySelector('.message-full');
+        
+                        if (full.classList.contains('hidden')) {
+                            preview.classList.add('hidden');
+                            full.classList.remove('hidden');
+                            this.textContent = 'Show less';
+                        } else {
+                           preview.classList.remove('hidden');
+                            full.classList.add('hidden');
+                            this.textContent = 'Show more';
+                        }
+                    });
+                }
+            }
+        }
+
+
+        window.addEventListener('message', event => {
+            const message = event.data;
+            switch (message.command) {
+                case 'appendStreamingResults':
+                    currentStreamingContent += message.content;
+                    updateStreamingResult();
+                    break;
+                case 'updateMetricsAndRequestBody':
+                    addCompletedResult(currentStreamingContent, message.metrics, message.requestBody, message.llmProvider);
+                    clearStreamingResults()
+                    currentStreamingContent = '';
+                    enableExecuteButton();
+                    // show lastCompletedResultConatainer
+                    lastCompletedResultConatainer.classList.remove('hidden');
+                    break;
+                case 'updateTestResult':
+                    const result = message.result;
+                    updateTestCaseStatus(result.testCase.id, result);
+                    break;
+                case 'error':
+                    enableExecuteButton();
+                    // show lastCompletedResultConatainer
+                    lastCompletedResultConatainer.classList.remove('hidden');
+                    break;
+            }
+        });
+
         // global scopes
-        window.deleteTestCase = function(index) {
-            testCases.splice(index, 1);
-            updateTestCasesDisplay();
+        window.deleteTestCase = function(id) {
+            const index = testCases.findIndex(testCase => testCase.id === id);
+            if (index !== -1) {
+                testCases.splice(index, 1);
+                updateTestCasesDisplay();
+            }
         }
         window.removeKeyword = removeKeyword;
 

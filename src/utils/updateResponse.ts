@@ -19,3 +19,10 @@ export function updateErrorInWebview(panel: any) {
         command: 'error', 
     });
 }
+
+export function updateTestResultInWebview(result: any, panel: any) {
+    panel.webview.postMessage({
+        command: 'updateTestResult',
+        result: result
+    });
+}
