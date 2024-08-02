@@ -1,53 +1,94 @@
-# LLMGate
+# LLMGate Prompt Lab
 
-Run comprehensive tests on prompts right from VS Code using multiple LLM providers.
+<p align="center">
+  <img src="https://llmgate.github.io/assets/logo.png" alt="LLMGate Logo" width="100"/>
+</p>
 
-## Features
+<p align="center">
+  A powerful and minimalistic VSCode extension for streamlined prompt engineering across multiple large language models.
+</p>
 
-- Test your prompts with multiple LLM providers simultaneously
-- Analyze prompt performance across different models and temperature settings
-- Get detailed test results including pass/fail status, cost, and response for each test
-- Receive a summary of test performance and overall cost
+## 🚀 Features
 
-## How to use
+### 📝 In-VSCode Prompt Testing
+- Run and iterate on prompts directly within VSCode
+- Real-time streaming of model responses
+- Support for system messages and multi-block user prompts
 
-1. Select the prompt text in your editor or leave it blank to enter in the input panel
-2. Open the command palette (Cmd+Shift+P on macOS, Ctrl+Shift+P on Windows/Linux)
-3. Type "LLMGate: Test your Prompt" and press Enter
-4. In the input panel:
-```
-Enter or edit your prompt
-Describe your target user
-Specify LLM providers, models, and temperature settings
-```
-5. Click Submit to run the test
-6. View the comprehensive test results in a new webview panel
+### 📊 Model Comparison
+- Compare different models side-by-side
+- Analyze cost and latency metrics with visual graphs
+- Find the most efficient model for your use case
 
-## Requirements
+### 🧪 Test Case Management
+- Quickly create test cases based on your prompts
+- Run test suites to ensure new prompts don't break existing use cases
+- Efficiently manage and organize your test cases
 
-- An active internet connection to communicate with the LLMGate Backend
-- A valid LLMGate API key
+### 🔄 Multi-Model Support
+- OpenAI and Google Gemini models supported
+- Easy switching between different providers and models
 
-## Extension Settings
+### ⚙️ Customizable Parameters
+- Adjust key parameters like temperature, max tokens, and more
+- Fine-tune your prompts for optimal performance
 
-This extension contributes the following settings:
-- llmgate.apiKey: Your LLMGate API key for authentication
+## 🔮 Coming Soon
 
-### How to get an API key
-1. Visit https://llmgate.github.io/ and request a key
-2. Once you receive it, Set the key in VS Code settings or when prompted by the extension
+- Function and tools support
+- Eval Agent Tests for comprehensive prompt evaluation
+- Integration with more LLM providers and models
 
-## Known Issues
+## 📋 Requirements
 
-No known issues at this time.
+- VSCode version 1.91.0 or higher
+- Active internet connection
+- API keys for supported LLM providers (OpenAI, Google)
 
-## Release Notes
+## 🔧 Extension Settings
 
-### 1.0.0
+| Setting | Description |
+|---------|-------------|
+| `llmgate.openAIApiKey` | Your OpenAI API key |
+| `llmgate.googleApiKey` | Your Google API key |
 
-Initial release of LLMGate with the following features:
+## 📥 Installation
 
-- Test prompts with multiple LLM providers
-- Customizable user role for generating relevant test questions
-- Detailed test results including cost and performance metrics
-- Support for OpenAI and Gemini models with customizable parameters
+1. Open VSCode
+2. Go to Extensions view (Ctrl+Shift+X)
+3. Search for "LLMGate Prompt Lab"
+4. Click Install
+
+## 🚀 Getting Started
+
+1. Select your prompt and open the command palette (Ctrl+Shift+P)
+2. Type "LLMGate Prompt Lab" and select it
+3. The Prompt Lab interface will open in a new tab
+4. Enter your system message and user prompts
+5. Select your desired model and parameters
+6. Click "Execute" to run your prompt
+
+## 📝 Release Notes
+
+### 1.0.2
+- Rewrite with enhanced features
+- Model comparison for cost and latency
+- Test case creation and management
+- Support for OpenAI and Google Gemini models
+
+### 0.0.1
+- Initial release with basic LLM testing capabilities
+
+## 🤝 Feedback and Contributions
+
+We welcome your feedback and contributions! Please open an issue or submit a pull request on our [GitHub repository](link-to-github-repo).
+
+## 📄 License
+
+This project is licensed under the [MIT License](https://opensource.org/licenses/MIT).
+
+---
+
+<p align="center">
+  <strong>Enjoy using LLMGate Prompt Lab!</strong>
+</p>

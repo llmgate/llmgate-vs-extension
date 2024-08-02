@@ -1,9 +1,14 @@
 {
   "name": "llmgate",
   "displayName": "LLMGate",
-  "description": "Run tests on your Prompts right from VS Code. Never ship a bad prompt.",
-  "version": "0.0.1",
+  "description": "Streamline your prompt engineering workflow from VS Code. Never ship a bad prompt.",
+  "version": "0.0.2",
+  "icon": "resources/logo.png",
   "publisher": "LLMGate",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/llmgate/llmgate-vs-extension.git"
+  },
   "engines": {
     "vscode": "^1.91.0"
   },
@@ -16,7 +21,7 @@
     "commands": [
       {
         "command": "llmgate.runTest",
-        "title": "LLMGate: Test your Prompt"
+        "title": "LLMGate Prompt Lab"
       }
     ],
     "configuration": {
@@ -26,6 +31,16 @@
           "type": "string",
           "default": "",
           "description": "API Key for LLMGate service"
+        },
+        "llmgate.openaiKey": {
+          "type": "string",
+          "default": "",
+          "description": "OpenAI API Key"
+        },
+        "llmgate.geminiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Gemini API Key"
         }
       }
     }
