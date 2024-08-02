@@ -575,7 +575,10 @@ export function getInputWebviewContent(selectedText: string): string {
                 }
             });
             document.getElementById('addEvalAgentTest').addEventListener('click', () => {
-                addTest('evalAgent', userMessages, null);
+                showKeywordError("Available in the next release..");
+                setTimeout(() => {
+                    hideKeywordError();
+                }, 1500);
             });
             updateTestCasesDisplay();
         }
