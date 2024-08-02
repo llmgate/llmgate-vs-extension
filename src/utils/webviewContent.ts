@@ -243,13 +243,76 @@ export function getInputWebviewContent(selectedText: string): string {
         .delete-test-case-btn:hover {
             opacity: 1;
         }
+        .user-message {
+            margin-bottom: 8px;
+            border-left: 3px solid var(--vscode-textLink-foreground);
+            padding-left: 8px;
+        }
+        .message-preview, .message-full {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .message-preview {
+            max-height: 2.8em; /* Approximately 2 lines */
+            overflow: hidden;
+        }
+        .toggle-message {
+            font-size: 10px;
+            margin-top: 4px;
+            background-color: transparent;
+            border: none;
+            color: var(--vscode-textLink-foreground);
+            cursor: pointer;
+            padding: 0;
+        }
+        .toggle-message:hover {
+            text-decoration: underline;
+        }
+        .hidden {
+            display: none;
+        }
         .test-case-content {
             white-space: pre-wrap;
             font-family: 'Consolas', 'Courier New', monospace;
             font-size: 12px;
         }
-        #addTestButton {
+        .test-buttons {
+           display: flex;
+            gap: 8px;
             margin-top: 8px;
+            justify-content: flex-start;
+        }
+        .mini-button {
+            background-color: var(--vscode-button-secondaryBackground, #3a3d41);
+            color: var(--vscode-button-secondaryForeground, #ffffff);
+            border: none;
+            padding: 4px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: background-color 0.2s;
+        }
+        .mini-button:hover {
+            background-color: var(--vscode-button-secondaryHoverBackground, #45494e);
+        }
+        .keyword-tag {
+            display: inline-block;
+            background-color: var(--vscode-badge-background);
+            color: var(--vscode-badge-foreground);
+            padding: 2px 6px;
+            margin: 2px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+        .keyword-tag .remove-keyword {
+            cursor: pointer;
+            margin-left: 4px;
+        }
+        .error-message {
+            color: var(--vscode-errorForeground);
+            font-size: 12px;
+            margin-top: 4px;
         }
     </style>
 </head>
@@ -343,6 +406,8 @@ export function getInputWebviewContent(selectedText: string): string {
 
         const lastCompletedResultConatainer = document.getElementById('lastCompletedResult');
 
+        let selectedKeywords = new Set();
+
         let currentStreamingContent = '';
         let completedResults = [];
         let testCases = [];
@@ -416,6 +481,7 @@ export function getInputWebviewContent(selectedText: string): string {
 
         executeButton.addEventListener('click', () => {
             disableExecuteButton();
+            selectedKeywords.clear();
             const systemMessage = systemMessageElement.value;
             const blocks = Array.from(document.querySelectorAll('.blockContent')).map(el => el.value);
             vscode.postMessage({
@@ -478,16 +544,75 @@ export function getInputWebviewContent(selectedText: string): string {
                     Latency: \${nanoToMilliseconds(result.metrics.latency).toFixed(2)} ms, 
                     Cost: $\${result.metrics.cost.toFixed(6)}
                 </div>
-                <button id="addTestButton">Add Test</button>
+                <div id="selectedKeywords"></div>
+                <div id="keywordError" class="error-message hidden"></div>
+                <div class="test-buttons">
+                    <button id="addKeywordsMatchingTest" class="mini-button">Add Keywords Test</button>
+                    <button id="addEvalAgentTest" class="mini-button">Add Eval Agent Test</button>
+                </div>
             </div>
-            \`;
+             \`;
 
-            // Add event listener for the Add Test button
-            document.getElementById('addTestButton').addEventListener('click', () => {
-                testCases.push(result.content);
-                updateTestCasesDisplay();
+            const contentElement = document.getElementById('content');
+            contentElement.addEventListener('mouseup', handleTextSelection);
+
+            let userMessages = [];
+            if (result.requestBody && result.requestBody.messages.length > 0) {
+                userMessages = result.requestBody.messages.filter(message => message.role === 'user');
+            }
+
+            // Add event listeners for the new buttons
+            document.getElementById('addKeywordsMatchingTest').addEventListener('click', () => {
+                if (selectedKeywords.size === 0) {
+                    showKeywordError("Please highlight and select keywords from the content above.");
+                } else {
+                    const tempKeywords = new Set(selectedKeywords);
+                    addTest('keywords', userMessages, tempKeywords);
+                    selectedKeywords.clear();
+                    updateSelectedKeywordsDisplay();
+                }
             });
+            document.getElementById('addEvalAgentTest').addEventListener('click', () => {
+                addTest('evalAgent', userMessages, null);
+            });
+            updateTestCasesDisplay();
+        }
 
+        function handleTextSelection() {
+           const selection = window.getSelection();
+            const selectedText = selection.toString().trim();
+            if (selectedText) {
+                selectedKeywords.add(selectedText);
+                updateSelectedKeywordsDisplay();
+            }
+        }
+
+        function updateSelectedKeywordsDisplay() {
+            const keywordsContainer = document.getElementById('selectedKeywords');
+            keywordsContainer.innerHTML = Array.from(selectedKeywords).map(keyword => 
+                \`<span class="keyword-tag">\${keyword}<span class="remove-keyword" onclick="removeKeyword('\${keyword}')">&times;</span></span>\`
+            ).join('');
+            hideKeywordError();
+        }
+
+        function removeKeyword(keyword) {
+            selectedKeywords.delete(keyword);
+            updateSelectedKeywordsDisplay();
+        }
+
+        function showKeywordError(message) {
+            const errorElement = document.getElementById('keywordError');
+            errorElement.textContent = message;
+            errorElement.classList.remove('hidden');
+        }
+
+        function hideKeywordError() {
+            const errorElement = document.getElementById('keywordError');
+            errorElement.classList.add('hidden');
+        }
+
+        function addTest(type, userMessages, keywords) {
+            testCases.push({ type, userMessages, keywords });
             updateTestCasesDisplay();
         }
 
@@ -599,22 +724,71 @@ export function getInputWebviewContent(selectedText: string): string {
             }           
             testCases.slice().reverse().forEach((testCase, index) => {
                 const actualIndex = testCases.length - 1 - index;
+                const testTypeName = testCase.type === 'keywords' ? 'Keywords Matching' : 'Eval Agent';
+        
+                // Format user messages
+                const userMessagesHtml = testCase.userMessages.map((message, msgIndex) => {
+                    const content = message.content || ''; // Handle 0 length content
+                    const hasMoreCharacters = content.length > 100;
+    
+                    const previewContent = hasMoreCharacters ? content.slice(0, 100) + '...' : content;
+    
+                    return \`
+                        <div class="user-message">
+                            <div class="\${hasMoreCharacters ? 'message-preview' : 'message-full'}">
+                                \${previewContent}
+                            </div>
+                            \${hasMoreCharacters ? \`
+                                <div class="message-full hidden">
+                                    \${content}
+                                </div>
+                                <button class="toggle-message" data-index="\${actualIndex}-\${msgIndex}">
+                                    Show more
+                                </button>
+                            \` : ''}
+                        </div>
+                    \`;
+                }).join('');
+
                 testCasesContainer.innerHTML += \`
                     <div class="test-case">
                         <div class="test-case-header">
-                            <h5>Test Case \${testCases.length - index}</h5>
+                            <h5>Test Case \${testCases.length - index} [\${testTypeName}]</h5>
                             <button class="delete-test-case-btn" onclick="deleteTestCase(\${actualIndex})">Delete</button>
                         </div>
-                        <div class="test-case-content">\${testCase}</div>
+                        <div class="user-messages-container">\${userMessagesHtml}</div>
+                        <div class="test-case-content">\${testCase.keywords !== null ? \`Keywords: \${Array.from(testCase.keywords).join(', ')}\` : ''}</div>
                     </div>
                 \`;
             });
+
+            // Add event listeners for toggle buttons
+            document.querySelectorAll('.toggle-message').forEach(button => {
+                button.addEventListener('click', function() {
+                    const [testIndex, messageIndex] = this.dataset.index.split('-');
+                    const messageContainer = this.closest('.user-message');
+                    const preview = messageContainer.querySelector('.message-preview');
+                    const full = messageContainer.querySelector('.message-full');
+            
+                    if (full.classList.contains('hidden')) {
+                        preview.classList.add('hidden');
+                        full.classList.remove('hidden');
+                        this.textContent = 'Show less';
+                    } else {
+                        preview.classList.remove('hidden');
+                        full.classList.add('hidden');
+                        this.textContent = 'Show more';
+                    }
+                });
+            });
         }
 
+        // global scopes
         window.deleteTestCase = function(index) {
             testCases.splice(index, 1);
             updateTestCasesDisplay();
         }
+        window.removeKeyword = removeKeyword;
 
     </script>
 </body>
