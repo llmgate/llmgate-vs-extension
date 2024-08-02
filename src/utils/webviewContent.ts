@@ -156,12 +156,6 @@ export function getInputWebviewContent(selectedText: string): string {
         .result-header h3 {
             margin: 0;
         }
-        .toggle-btn {
-            background: none;
-            border: none;
-            color: var(--vscode-editor-foreground);
-            cursor: pointer;
-        }
         .result-content {
             margin-bottom: 8px;
             overflow: hidden;
@@ -303,7 +297,7 @@ export function getInputWebviewContent(selectedText: string): string {
         <div id="responseSection">
             <div class="title-header">Completions</div>
             <div id="streamingResult"></div>
-            <div id="completedResults"></div>
+            <div id="lastCompletedResult" class="hidden"></div>
         </div>
     </div>
     <script>
@@ -315,13 +309,12 @@ export function getInputWebviewContent(selectedText: string): string {
         const providerSelect = document.getElementById('providerSelect');
         const modelSelect = document.getElementById('modelSelect');
 
-        let completionResults = [];
-        let metricsData = {};
+        const lastCompletedResultConatainer = document.getElementById('lastCompletedResult');
 
-        function addNewResult(content, metrics) {
-            completionResults.unshift({ content, metrics });
-            updateResultsDisplay();
-        }
+        let currentStreamingContent = '';
+        let completedResults = [];
+        let testCases = [];
+        let metricsData = {};
 
         const openAIModels = ${JSON.stringify(openAIModels)};
         const geminiModels = ${JSON.stringify(geminiModels)};
@@ -402,26 +395,29 @@ export function getInputWebviewContent(selectedText: string): string {
                 llmProvider: providerSelect.value,
                 llmModel: modelSelect.value
             });
+            // hide lastCompletedResultConatainer
+            lastCompletedResultConatainer.classList.add('hidden');
         });
 
-        let currentStreamingContent = '';
-        let completedResults = [];
         window.addEventListener('message', event => {
             const message = event.data;
             switch (message.command) {
                 case 'appendStreamingResults':
                     currentStreamingContent += message.content;
                     updateStreamingResult();
-                    enableExecuteButton();
                     break;
                 case 'updateMetricsAndRequestBody':
                     addCompletedResult(currentStreamingContent, message.metrics, message.requestBody, message.llmProvider);
                     clearStreamingResults()
                     currentStreamingContent = '';
                     enableExecuteButton();
+                    // show lastCompletedResultConatainer
+                    lastCompletedResultConatainer.classList.remove('hidden');
                     break;
                 case 'error':
                     enableExecuteButton();
+                    // show lastCompletedResultConatainer
+                    lastCompletedResultConatainer.classList.remove('hidden');
                     break;
             }
         });
@@ -435,15 +431,15 @@ export function getInputWebviewContent(selectedText: string): string {
             \`;
         }
 
-        function updateCompletedResultsDisplay() {
-            const completedResultsContainer = document.getElementById('completedResults');
-            completedResultsContainer.innerHTML = completedResults.map((result, index) => \`
+        function updateLastCompletedResultToDisplay() {
+            // only show last result
+            const result = completedResults[completedResults.length - 1];
+            lastCompletedResultConatainer.innerHTML = \`
             <div class="completion-result">
-                <div class="result-header" onclick="toggleResult(\${index})">
-                    <h5>Test \${completedResults.length - index}</h5>
-                    <button class="toggle-btn" id="toggleBtn\${index}">▼</button>
+                <div class="result-header">
+                    <h5>Current Completion</h5>
                 </div>
-                <div class="result-content" id="content\${index}">
+                <div class="result-content" id="content\">
                     \${result.content}
                 </div>
                 <div class="result-metrics">
@@ -451,38 +447,13 @@ export function getInputWebviewContent(selectedText: string): string {
                     Cost: $\${result.metrics.cost.toFixed(6)}
                 </div>
             </div>
-            \`).join('');
-        }
-
-        function toggleResult(index) {
-            const content = document.getElementById(\`content\${index}\`);
-            const toggleBtn = document.getElementById(\`toggleBtn\${index}\`);
-            if (content.classList.contains('collapsed')) {
-                content.classList.remove('collapsed');
-                toggleBtn.textContent = '▼';
-            } else {
-                content.classList.add('collapsed');
-                toggleBtn.textContent = '▶';
-            }
-        }
-
-        // Add this function to set initial state
-        function setInitialResultsState() {
-            completedResults.forEach((_, index) => {
-                const content = document.getElementById(\`content\${index}\`);
-                const toggleBtn = document.getElementById(\`toggleBtn\${index}\`);
-                if (content && toggleBtn) {
-                    content.classList.remove('collapsed');
-                    toggleBtn.textContent = '▼';
-                }
-            });
+            \`;
         }
 
         // Modify the addCompletedResult function
         function addCompletedResult(content, metrics, requestBody, llmProvider) {
-            completedResults.unshift({ content, metrics, requestBody, llmProvider });
-            updateCompletedResultsDisplay();
-            setInitialResultsState(); // Set initial state after updating display
+            completedResults.push({ content, metrics, requestBody, llmProvider });
+            updateLastCompletedResultToDisplay();
             updateMetricsGraph();
         }
 
@@ -493,20 +464,6 @@ export function getInputWebviewContent(selectedText: string): string {
 
         function nanoToMilliseconds(nanoseconds) {
             return nanoseconds / 1000000; // or nanoseconds / 1e6
-        }
-
-        function updateResultsDisplay() {
-            const streamingResults = document.getElementById('streamingResults');
-            streamingResults.innerHTML = completionResults.map((result, index) => \`
-                <div class="completion-result">
-                    <h3>Test \${completionResults.length - index}</h3>
-                    <div class="result-content">\${result.content}</div>
-                    <div class="result-metrics">
-                        Latency: \${nanoToMilliseconds(result.metrics.latency).toFixed(2)} ms, 
-                        Cost: $\${result.metrics.cost.toFixed(6)}
-                    </div>
-                </div>
-            \`).join('');
         }
 
         function updateMetricsGraph() {
@@ -529,10 +486,11 @@ export function getInputWebviewContent(selectedText: string): string {
                 const key = \`\${provider}-\${model}\`;
 
                 if (!metricsData[key]) {
-                    metricsData[key] = { cost: 0, latency: 0 };
+                    metricsData[key] = { cost: 0, latency: 0, count: 0 };
                 }
                 metricsData[key].cost += result.metrics.cost;
                 metricsData[key].latency += nanoToMilliseconds(result.metrics.latency);
+                metricsData[key].count++;
             });
 
             createComparativeBarChart(costComparisonElement, metricsData, 'cost');
