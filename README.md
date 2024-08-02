@@ -1,11 +1,11 @@
 # LLMGate Prompt Lab
 
 <p align="center">
-  <img src="path_to_your_logo.png" alt="LLMGate Logo" width="200"/>
+  <img src="https://llmgate.github.io/assets/logo.png" alt="LLMGate Logo" width="200"/>
 </p>
 
 <p align="center">
-  A powerful VSCode extension for streamlined prompt engineering across multiple large language models.
+  A powerful and minimalistic VSCode extension for streamlined prompt engineering across multiple large language models.
 </p>
 
 <p align="center">
