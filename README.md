@@ -7,15 +7,6 @@
 <p align="center">
   A powerful and minimalistic VSCode extension for streamlined prompt engineering across multiple large language models.
 </p>
-
-<p align="center">
-  <a href="#features">Features</a> •
-  <a href="#coming-soon">Roadmap</a> •
-  <a href="#installation">Installation</a> •
-  <a href="#getting-started">Quick Start</a> •
-  <a href="#license">License</a>
-</p>
-
 ---
 
 ## 🚀 Features
