@@ -220,6 +220,37 @@ export function getInputWebviewContent(selectedText: string): string {
             scrollbar-width: thin;
             scrollbar-color: var(--vscode-scrollbarSlider-hoverBackground) var(--vscode-scrollbarSlider-background);
         }
+        .test-case {
+            border: 1px solid var(--vscode-panel-border);
+            margin-top: 8px;
+            padding: 8px;
+        }
+        .test-case-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        .delete-test-case-btn {
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            padding: 2px 6px;
+            font-size: 11px;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+        .delete-test-case-btn:hover {
+            opacity: 1;
+        }
+        .test-case-content {
+            white-space: pre-wrap;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px;
+        }
+        #addTestButton {
+            margin-top: 8px;
+        }
     </style>
 </head>
 <body>
@@ -298,6 +329,7 @@ export function getInputWebviewContent(selectedText: string): string {
             <div class="title-header">Completions</div>
             <div id="streamingResult"></div>
             <div id="lastCompletedResult" class="hidden"></div>
+            <div id="testCasesContainer"></div>
         </div>
     </div>
     <script>
@@ -446,8 +478,17 @@ export function getInputWebviewContent(selectedText: string): string {
                     Latency: \${nanoToMilliseconds(result.metrics.latency).toFixed(2)} ms, 
                     Cost: $\${result.metrics.cost.toFixed(6)}
                 </div>
+                <button id="addTestButton">Add Test</button>
             </div>
             \`;
+
+            // Add event listener for the Add Test button
+            document.getElementById('addTestButton').addEventListener('click', () => {
+                testCases.push(result.content);
+                updateTestCasesDisplay();
+            });
+
+            updateTestCasesDisplay();
         }
 
         // Modify the addCompletedResult function
@@ -546,6 +587,33 @@ export function getInputWebviewContent(selectedText: string): string {
             });
 
             element.innerHTML = html;
+        }
+
+        // Add this function to update the test cases display
+        function updateTestCasesDisplay() {
+            const testCasesContainer = document.getElementById('testCasesContainer');
+            if (testCases.length > 0) {
+                testCasesContainer.innerHTML = '<h4>Test Cases</h4>';
+            } else {
+                testCasesContainer.innerHTML = '';
+            }           
+            testCases.slice().reverse().forEach((testCase, index) => {
+                const actualIndex = testCases.length - 1 - index;
+                testCasesContainer.innerHTML += \`
+                    <div class="test-case">
+                        <div class="test-case-header">
+                            <h5>Test Case \${testCases.length - index}</h5>
+                            <button class="delete-test-case-btn" onclick="deleteTestCase(\${actualIndex})">Delete</button>
+                        </div>
+                        <div class="test-case-content">\${testCase}</div>
+                    </div>
+                \`;
+            });
+        }
+
+        window.deleteTestCase = function(index) {
+            testCases.splice(index, 1);
+            updateTestCasesDisplay();
         }
 
     </script>
