@@ -7,7 +7,6 @@
 <p align="center">
   A powerful and minimalistic VSCode extension for streamlined prompt engineering across multiple large language models.
 </p>
----
 
 ## 🚀 Features
 
