@@ -41,7 +41,7 @@
 
 ## 📋 Requirements
 
-- VSCode version 1.60.0 or higher
+- VSCode version 1.91.0 or higher
 - Active internet connection
 - API keys for supported LLM providers (OpenAI, Google)
 
@@ -70,13 +70,13 @@
 
 ## 📝 Release Notes
 
-### 1.0.1
+### 1.0.2
 - Rewrite with enhanced features
 - Model comparison for cost and latency
 - Test case creation and management
 - Support for OpenAI and Google Gemini models
 
-### 1.0.0
+### 0.0.1
 - Initial release with basic LLM testing capabilities
 
 ## 🤝 Feedback and Contributions
