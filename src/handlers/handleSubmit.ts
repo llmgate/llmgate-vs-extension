@@ -103,7 +103,8 @@ async function sendToBackend(requestBody: any,
     
     const response = await axios.post(url, requestBody, {
         headers: {
-            [apiKeyHeader]: `${apiKey}`
+            [apiKeyHeader]: `${apiKey}`,
+            'x-llmgate-source': 'vscode_extension',
         },
         responseType: 'stream'
     });

@@ -462,7 +462,7 @@ export function getInputWebviewContent(selectedText: string): string {
             completedResultsContainer.innerHTML = completedResults.map((result, index) => \`
             <div class="completion-result">
                 <div class="result-header" onclick="toggleResult(\${index})">
-                    <h5>Completion \${completedResults.length - index}</h5>
+                    <h5>Test \${completedResults.length - index}</h5>
                     <button class="toggle-btn" id="toggleBtn\${index}">▼</button>
                 </div>
                 <div class="result-content" id="content\${index}">
@@ -535,7 +535,7 @@ export function getInputWebviewContent(selectedText: string): string {
             const streamingResults = document.getElementById('streamingResults');
             streamingResults.innerHTML = completionResults.map((result, index) => \`
                 <div class="completion-result">
-                    <h3>Completion \${completionResults.length - index}</h3>
+                    <h3>Test \${completionResults.length - index}</h3>
                     <div class="result-content">\${result.content}</div>
                     <div class="result-metrics">
                         Latency: \${nanoToMilliseconds(result.metrics.latency).toFixed(2)} ms, 
