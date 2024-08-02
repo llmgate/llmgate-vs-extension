@@ -887,13 +887,6 @@ export function getInputWebviewContent(selectedText: string): string {
                         statusElement.classList.add('status-failure');
                         break;
                 }
-
-
-                if (status === 'success) {
-                    const cost = testResult.cost || 0;
-                    const latency = testResult.latency || 0;
-                    // todo: this should also update graph.. 
-                }
         
                 // Add response content
                 const resultElement = document.createElement('div');
