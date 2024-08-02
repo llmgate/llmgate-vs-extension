@@ -612,7 +612,7 @@ export function getInputWebviewContent(selectedText: string): string {
                 showKeywordError("Available in the next release..");
                 setTimeout(() => {
                     hideKeywordError();
-                }, 1500);
+                }, 1000);
             });
             updateTestCasesDisplay();
         }
