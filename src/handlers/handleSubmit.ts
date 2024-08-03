@@ -58,6 +58,9 @@ export async function handleRunTestCases(systemPrompt: string, testCases: any[],
                 const latency = response.latency;
                 const content = responseData.choices[0].message.content;
                 
+                let passed = true;
+                let errorMessage: string | null = "";
+                // keywords check
                 let missingKeywords = [];
                 const lowerContent = content.toLowerCase();
                 for (let i = 0; i < testCase.keywords.length; i++) {
@@ -65,14 +68,24 @@ export async function handleRunTestCases(systemPrompt: string, testCases: any[],
                     if (!lowerContent.includes(keyword)) {
                         missingKeywords.push(testCase.keywords[i]);
                     }
-                }
-    
-                let passed = true;
-                let errorMessage = null;
+                }    
                 const allKeywordsPresent = missingKeywords.length === 0;
                 if (!allKeywordsPresent) {
                     passed = false;
-                    errorMessage = `Missing keywords: ${missingKeywords.join(', ')}`;
+                    errorMessage = `Missing keywords: ${missingKeywords.join(', ')}, `;
+                }
+                // test cases check
+                if (testCase.shouldValidateJson) {
+                    try {
+                        JSON.parse(content);
+                    } catch (e) {
+                        passed = false;
+                        errorMessage += "Invalid JSON, ";
+                    }
+                }
+
+                if (errorMessage === "") {
+                    errorMessage = null;
                 }
 
                 const result = {

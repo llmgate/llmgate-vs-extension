@@ -488,7 +488,7 @@ export function getInputWebviewContent(selectedText: string): string {
                     <textarea id="systemMessage" rows="1" placeholder="Enter system message here">${selectedText}</textarea>
                 </div>
                 <div class="message-container">
-                    <div class="message-header">User message</div>
+                    <div class="message-header">User Message</div>
                     <div id="blocksContainer">
                         <div class="block-container">
                             <textarea class="blockContent" rows="1" placeholder="Prompt text..."></textarea>
@@ -634,13 +634,20 @@ export function getInputWebviewContent(selectedText: string): string {
             const filteredCompletedResults = completedResults.filter(result => !result.isFromTest);
             // only show last result
             const result = filteredCompletedResults[filteredCompletedResults.length - 1];
+            let jsonString = null;
+            try {
+                const jsonObject = JSON.parse(result.content);
+                jsonString = JSON.stringify(jsonObject, null, 2);
+            } catch (e) {
+                jsonString = null;
+            }
             lastCompletedResultConatainer.innerHTML = \`
             <div class="completion-result">
                 <div class="result-header">
                     <h5>Current Completion</h5>
                 </div>
                 <div class="result-content" id="content\">
-                    \${result.content}
+                    \${jsonString === null ? result.content : jsonString}
                 </div>
                 <div class="result-metrics">
                     Latency: \${nanoToMilliseconds(result.metrics.latency).toFixed(2)} ms, 
@@ -898,6 +905,7 @@ export function getInputWebviewContent(selectedText: string): string {
                             <span class="test-case-status"></span>
                             <button class="delete-test-case-btn"onclick="deleteTestCase('\${testCase.id}')">del</button>
                         </div>
+                        <div class="message-header">User Messages</div>
                         <div class="user-messages-container">\${userMessagesHtml}</div>
                     </div>
                 \`;
@@ -991,8 +999,8 @@ export function getInputWebviewContent(selectedText: string): string {
                 const previewContent = hasMoreCharacters ? responseContent.slice(0, 100) + '...' : responseContent;
 
                 resultElement.innerHTML = \`
+                    <div class="message-header">Test Response</div>
                     <div class="response-message">
-                        <div class="message-header">Response:</div>
                         <div class="\${hasMoreCharacters ? 'message-preview' : 'message-full'}">
                             \${previewContent}
                         </div>
