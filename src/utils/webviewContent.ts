@@ -298,15 +298,68 @@ export function getInputWebviewContent(selectedText: string): string {
             font-family: 'Consolas', 'Courier New', monospace;
             font-size: 12px;
         }
-        .test-buttons {
-           display: flex;
-            gap: 8px;
+        .test-case-form {
             margin-top: 8px;
-            justify-content: flex-start;
+            padding-top: 8px;
+            border-top: 1px solid var(--vscode-panel-border);
+        }
+        .form-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .keywords-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            padding-right: 10px;
+        }
+        #keywordsInput {
+            height: 24px;
+            margin-bottom: 4px;
+        }
+        #keywordTags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            min-height: 24px;
+        }
+        .keyword-tag {
+            background-color: var(--vscode-badge-background);
+            color: var(--vscode-badge-foreground);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            display: inline-flex;
+            align-items: center;
+        }
+        .keyword-tag::after {
+            content: '×';
+            margin-left: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            flex: 1;
+        }
+        #addTestCase {
+            white-space: nowrap;
+            height: 28px;
+            padding: 0 16px;
+            font-size: 13px;
+        }
+        .error-message {
+            color: var(--vscode-errorForeground);
+            font-size: 12px;
+            margin-top: 4px;
         }
         .mini-button {
-            background-color: var(--vscode-button-secondaryBackground, #3a3d41);
-            color: var(--vscode-button-secondaryForeground, #ffffff);
+            background-color: var(--vscode-button-prominence-background, #0e639c);
+            color: var(--vscode-button-prominence-foreground, #ffffff);
             border: none;
             padding: 4px 8px;
             font-size: 11px;
@@ -315,7 +368,7 @@ export function getInputWebviewContent(selectedText: string): string {
             transition: background-color 0.2s;
         }
         .mini-button:hover {
-            background-color: var(--vscode-button-secondaryHoverBackground, #45494e);
+            background-color: var(--vscode-button-prominenceHover-background, #1177bb);
         }
         .error-message {
             color: var(--vscode-errorForeground);
@@ -425,7 +478,7 @@ export function getInputWebviewContent(selectedText: string): string {
                 <div class="title-header">Model Comparision Analysis</div>
                 <div class="graphs-container">
                     <div class="graph-section">
-                        <h4>Total Cost</h4>
+                        <h4>Average Cost</h4>
                         <div id="costComparison"></div>
                     </div>
                     <div class="graph-section">
@@ -568,8 +621,22 @@ export function getInputWebviewContent(selectedText: string): string {
                     Latency: \${nanoToMilliseconds(result.metrics.latency).toFixed(2)} ms, 
                     Cost: $\${result.metrics.cost.toFixed(6)}
                 </div>
-                <div class="test-buttons">
-                    <button id="addTestCase" class="mini-button">Add Test Case</button>
+                <div class="test-case-form">
+                    <h6>Add as a Test Case</h6>
+                    <div class="form-row">
+                        <div class="keywords-container">
+                            <input type="text" id="keywordsInput" placeholder="Keywords (Tab to add)">
+                            <div id="keywordTags"></div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="checkbox-container">
+                            <input type="checkbox" id="validateJsonCheckbox">
+                            <label for="validateJsonCheckbox">Validate JSON</label>
+                        </div>
+                        <button id="addTestCase" class="mini-button">Add</button>
+                    </div>
+                    <div id="testCaseError" class="error-message hidden"></div>
                 </div>
             </div>
              \`;
@@ -581,16 +648,69 @@ export function getInputWebviewContent(selectedText: string): string {
                 userMessages = result.requestBody.messages.filter(message => message.role === 'user');
             }
 
-            // Add event listeners for the new test button
-            document.getElementById('addTestCase').addEventListener('click', () => {
-                addTest(result.requestBody.messages.filter(message => message.role === 'user'));
+            // Add event listeners for the new test form
+            const keywordsInput = document.getElementById('keywordsInput');
+            const keywordTags = document.getElementById('keywordTags');
+            const validateJsonCheckbox = document.getElementById('validateJsonCheckbox');
+
+
+            keywordsInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const keyword = keywordsInput.value.trim();
+                    if (keyword) {
+                        const tag = document.createElement('span');
+                        tag.className = 'keyword-tag';
+                        tag.textContent = keyword;
+                        keywordTags.appendChild(tag);
+                        keywordsInput.value = '';
+                        errorMessage.classList.add('hidden');
+                    }
+                }
             });
+
+            validateJsonCheckbox.addEventListener('change', () => {
+                errorMessage.classList.add('hidden');
+            });
+
+            keywordTags.addEventListener('click', (e) => {
+                if (e.target.classList.contains('keyword-tag')) {
+                    e.target.remove();
+                    if (keywordTags.children.length === 0 && !validateJsonCheckbox.checked) {
+                        errorMessage.textContent = "Please add keywords or select JSON validation.";
+                        errorMessage.classList.remove('hidden');
+                    }
+                }
+            });
+
+            const addTestCaseButton = document.getElementById('addTestCase');
+            const errorMessage = document.getElementById('testCaseError');
+
+            
+            addTestCaseButton.addEventListener('click', () => {
+                const keywords = Array.from(keywordTags.children).map(tag => tag.textContent);
+                const shouldValidateJson = validateJsonCheckbox.checked;
+    
+                if (keywords.length === 0 && !shouldValidateJson) {
+                    errorMessage.textContent = "Please add keywords or select JSON validation.";
+                    errorMessage.classList.remove('hidden');
+                } else {
+                    errorMessage.classList.add('hidden');
+                    addTest(result.requestBody.messages.filter(message => message.role === 'user'), keywords, shouldValidateJson);
+                }
+            });
+
             updateTestCasesDisplay();
         }
 
-        function addTest(userMessages) {
+        function addTest(userMessages, keywords, shouldValidateJson) {
             const uniqueId = Date.now().toString(36) + Math.random().toString(36).substr(2);
-            testCases.push({ id: uniqueId, userMessages });
+            testCases.push({ 
+                id: uniqueId,
+                userMessages,
+                keywords,
+                shouldValidateJson
+            });
             updateTestCasesDisplay();
         }
 
