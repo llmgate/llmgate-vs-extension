@@ -613,6 +613,9 @@ export function getInputWebviewContent(selectedText: string): string {
                 userPrompts: blocks,
                 maxTokens: document.getElementById('maxTokens').value,
                 temperature: document.getElementById('temperatureInput').value,
+                topP: document.getElementById('topP').value,
+                frequencyPenalty: document.getElementById('frequencyPenalty').value,
+                presencePenalty: document.getElementById('presencePenalty').value,
                 llmProvider: providerSelect.value,
                 llmModel: modelSelect.value
             });
@@ -944,6 +947,9 @@ export function getInputWebviewContent(selectedText: string): string {
                         testCases: testCases,
                         maxTokens: document.getElementById('maxTokens').value,
                         temperature: document.getElementById('temperatureInput').value,
+                        topP: document.getElementById('topP').value,
+                        frequencyPenalty: document.getElementById('frequencyPenalty').value,
+                        presencePenalty: document.getElementById('presencePenalty').value,
                         llmProvider: providerSelect.value,
                         llmModel: modelSelect.value
                     });
@@ -1038,7 +1044,6 @@ export function getInputWebviewContent(selectedText: string): string {
                 }
             }
         }
-
 
         window.addEventListener('message', event => {
             const message = event.data;

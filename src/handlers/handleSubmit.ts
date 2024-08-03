@@ -4,7 +4,9 @@ import { BACKEND_URL } from '../utils/constants';
 import { updateErrorInWebview, updateMetricsAndRequestBodyInWebview, updateStreamingResponseInWebview, updateTestResultInWebview } from '../utils/updateResponse';
 import { promptForApiKey } from '../utils/promptForApiKey';
 
-export async function handleRunTestCases(systemPrompt: string, testCases: any[], maxTokens: number, temperature: number, llmProvider: string, llmModel: string, panel: vscode.WebviewPanel) {
+export async function handleRunTestCases(systemPrompt: string, testCases: any[], maxTokens: number, 
+    temperature: number, topP: number, frequencyPenalty: number, presencePenalty: number,
+    llmProvider: string, llmModel: string, panel: vscode.WebviewPanel) {
     // Check if API key is set
     const config = vscode.workspace.getConfiguration('llmgate');
     let openaiApiKey = config.get<string>('openaiKey');
@@ -48,6 +50,9 @@ export async function handleRunTestCases(systemPrompt: string, testCases: any[],
                 ],
                 "temperature": Number(temperature),
                 "max_tokens": Number(maxTokens),
+                "top_p": Number(topP),
+                "frequency_penalty": Number(frequencyPenalty),
+                "presence_penalty": Number(presencePenalty),
                 "stream": false
             };
 
@@ -116,7 +121,9 @@ export async function handleRunTestCases(systemPrompt: string, testCases: any[],
     });
 }
 
-export async function handleSubmit(systemPrompt: string, userPrompts: string[], maxTokens: number, temperature: number, llmProvider: string, llmModel: string, panel: vscode.WebviewPanel) {
+export async function handleSubmit(systemPrompt: string, userPrompts: string[], maxTokens: number, 
+    temperature: number, topP: number, frequencyPenalty: number, presencePenalty: number,
+    llmProvider: string, llmModel: string, panel: vscode.WebviewPanel) {
     // Check if API key is set
     const config = vscode.workspace.getConfiguration('llmgate');
     // let llmgateAPiKey = config.get<string>('apiKey');
@@ -175,6 +182,9 @@ export async function handleSubmit(systemPrompt: string, userPrompts: string[], 
         "messages": messages,
         "temperature": Number(temperature),
         "max_tokens": Number(maxTokens),
+        "top_p": Number(topP),
+        "frequency_penalty": Number(frequencyPenalty),
+        "presence_penalty": Number(presencePenalty),
         "stream": true
     };
     
