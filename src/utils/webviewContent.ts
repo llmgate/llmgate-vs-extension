@@ -970,12 +970,6 @@ export function getInputWebviewContent(selectedText: string): string {
                 const statusElement = testCase.querySelector('.test-case-status');
                 statusElement.className = 'test-case-status';
         
-                // Clear previous results
-                const previousResult = testCase.querySelector('.test-result');
-                if (previousResult) {
-                    previousResult.remove();
-                }
-        
                 switch(status) {
                     case 'running':
                         statusElement.innerHTML = '[running..]';
@@ -1063,7 +1057,8 @@ export function getInputWebviewContent(selectedText: string): string {
                     break;
                 case 'updateTestResult':
                     const result = message.result;
-                    addCompletedResult(result.response, result.metrics, result.requestBody, result.llmProvider, true);
+                    // TODO: fix this
+                    // addCompletedResult(result.response, result.metrics, result.requestBody, result.llmProvider, true);
                     updateTestCaseStatus(result);
                     break;
                 case 'error':
