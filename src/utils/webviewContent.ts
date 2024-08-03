@@ -438,11 +438,11 @@ export function getInputWebviewContent(selectedText: string): string {
                 <div class="title-header">Model Comparision Analysis</div>
                 <div class="graphs-container">
                     <div class="graph-section">
-                        <h4>Cost Comparison</h4>
+                        <h4>Total Cost</h4>
                         <div id="costComparison"></div>
                     </div>
                     <div class="graph-section">
-                        <h4>Latency Comparison</h4>
+                        <h4>Average Latency</h4>
                         <div id="latencyComparison"></div>
                     </div>
                 </div>
@@ -568,8 +568,10 @@ export function getInputWebviewContent(selectedText: string): string {
         }
 
         function updateLastCompletedResultToDisplay() {
+            // exclude unit test results
+            const filteredCompletedResults = completedResults.filter(result => !result.isFromTest);
             // only show last result
-            const result = completedResults[completedResults.length - 1];
+            const result = filteredCompletedResults[filteredCompletedResults.length - 1];
             lastCompletedResultConatainer.innerHTML = \`
             <div class="completion-result">
                 <div class="result-header">
@@ -658,8 +660,8 @@ export function getInputWebviewContent(selectedText: string): string {
         }
 
         // Modify the addCompletedResult function
-        function addCompletedResult(content, metrics, requestBody, llmProvider) {
-            completedResults.push({ content, metrics, requestBody, llmProvider });
+        function addCompletedResult(content, metrics, requestBody, llmProvider, isFromTest) {
+            completedResults.push({ content, metrics, requestBody, llmProvider, isFromTest });
             updateLastCompletedResultToDisplay();
             updateMetricsGraph();
         }
@@ -861,7 +863,8 @@ export function getInputWebviewContent(selectedText: string): string {
             }
         }
 
-        function updateTestCaseStatus(id, testResult) {
+        function updateTestCaseStatus(testResult) {
+            const id = testResult.testCase.id
             const testCase = document.getElementById(\`test-case-\${id}\`);
             const status = testResult.passed ? 'success' : 'failure';
             if (testCase) {
@@ -953,7 +956,7 @@ export function getInputWebviewContent(selectedText: string): string {
                     updateStreamingResult();
                     break;
                 case 'updateMetricsAndRequestBody':
-                    addCompletedResult(currentStreamingContent, message.metrics, message.requestBody, message.llmProvider);
+                    addCompletedResult(currentStreamingContent, message.metrics, message.requestBody, message.llmProvider, false);
                     clearStreamingResults()
                     currentStreamingContent = '';
                     enableExecuteButton();
@@ -962,7 +965,8 @@ export function getInputWebviewContent(selectedText: string): string {
                     break;
                 case 'updateTestResult':
                     const result = message.result;
-                    updateTestCaseStatus(result.testCase.id, result);
+                    addCompletedResult(result.response, result.metrics, result.requestBody, result.llmProvider, true);
+                    updateTestCaseStatus(result);
                     break;
                 case 'error':
                     enableExecuteButton();

@@ -73,8 +73,12 @@ export async function handleRunTestCases(systemPrompt: string, testCases: any[],
                     testCase: testCase,
                     passed: allKeywordsPresent,
                     response: content,
-                    cost: cost,
-                    latency: latency,
+                    metrics: {
+                        latency: latency,
+                        cost: cost,    
+                    },
+                    requestBody: requestBody,
+                    llmProvider: llmProvider,
                     error: allKeywordsPresent ? null : `Missing keywords: ${missingKeywords.join(', ')}`
                 };
 
@@ -270,11 +274,11 @@ async function sendToBackend(requestBody: any,
 
     // Get cost from header and convert to number if it exists
     const cost = response.headers['llm-cost'];
-    const parsedCost = cost ? parseFloat(cost) : undefined;
+    const parsedCost = cost ? parseFloat(cost) : 0;
 
     // Get latency from header and convert to number if it exists
     const latency = response.headers['llm-latency'];
-    const parsedLatency = latency ? parseInt(latency, 10) : undefined;
+    const parsedLatency = latency ? parseInt(latency, 10) : 0;
 
     return {
         data: response.data,
