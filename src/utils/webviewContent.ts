@@ -622,7 +622,7 @@ export function getInputWebviewContent(selectedText: string): string {
                     Cost: $\${result.metrics.cost.toFixed(6)}
                 </div>
                 <div class="test-case-form">
-                    <h6>Add as a Test Case</h6>
+                    <h5>Add as a Test Case</h5>
                     <div class="form-row">
                         <div class="keywords-container">
                             <input type="text" id="keywordsInput" placeholder="Keywords to match (Tab to add)">
