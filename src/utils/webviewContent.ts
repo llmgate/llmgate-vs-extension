@@ -245,6 +245,12 @@ export function getInputWebviewContent(selectedText: string): string {
         .test-case-header {
             margin-right: 30px; /* Make space for the delete button */
         }
+        .test-cases-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
         .test-cases-title {
             margin: 0;
         }
@@ -298,15 +304,84 @@ export function getInputWebviewContent(selectedText: string): string {
             font-family: 'Consolas', 'Courier New', monospace;
             font-size: 12px;
         }
-        .test-buttons {
-           display: flex;
+        .test-case-form {
+            margin-top: 4px;
+            padding-top: 4px;
+            border-top: 1px solid var(--vscode-panel-border);
+        }
+        .test-case-form-header::before {
+            content: '▶';
+            display: inline-block;
+            margin-right: 5px;
+            transition: transform 0.3s;
+        }
+        .test-case-form:not(.collapsed) .test-case-form-header::before {
+            transform: rotate(90deg);
+        }
+        .test-case-form-content.hidden {
+            display: none;
+        }
+        .test-case-form-header {
+            cursor: pointer;
+            user-select: none;
+        }
+        .form-row {
+            display: flex;
+            align-items: center;
             gap: 8px;
-            margin-top: 8px;
-            justify-content: flex-start;
+            margin-bottom: 8px;
+        }
+        .keywords-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            padding-right: 10px;
+        }
+        #keywordsInput {
+            height: 18px;
+            margin-bottom: 4px;
+        }
+        #keywordTags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            min-height: 24px;
+        }
+        .keyword-tag {
+            background-color: var(--vscode-badge-background);
+            color: var(--vscode-badge-foreground);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            display: inline-flex;
+            align-items: center;
+        }
+        .keyword-tag::after {
+            content: '×';
+            margin-left: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            flex: 1;
+        }
+        #addTestCase {
+            white-space: nowrap;
+            height: 28px;
+            padding: 0 16px;
+            font-size: 13px;
+        }
+        .error-message {
+            color: var(--vscode-errorForeground);
+            font-size: 12px;
+            margin-top: 4px;
         }
         .mini-button {
-            background-color: var(--vscode-button-secondaryBackground, #3a3d41);
-            color: var(--vscode-button-secondaryForeground, #ffffff);
+            background-color: var(--vscode-button-prominence-background, #0e639c);
+            color: var(--vscode-button-prominence-foreground, #ffffff);
             border: none;
             padding: 4px 8px;
             font-size: 11px;
@@ -315,20 +390,7 @@ export function getInputWebviewContent(selectedText: string): string {
             transition: background-color 0.2s;
         }
         .mini-button:hover {
-            background-color: var(--vscode-button-secondaryHoverBackground, #45494e);
-        }
-        .keyword-tag {
-            display: inline-block;
-            background-color: var(--vscode-badge-background);
-            color: var(--vscode-badge-foreground);
-            padding: 2px 6px;
-            margin: 2px;
-            border-radius: 3px;
-            font-size: 11px;
-        }
-        .keyword-tag .remove-keyword {
-            cursor: pointer;
-            margin-left: 4px;
+            background-color: var(--vscode-button-prominenceHover-background, #1177bb);
         }
         .error-message {
             color: var(--vscode-errorForeground);
@@ -372,6 +434,9 @@ export function getInputWebviewContent(selectedText: string): string {
         }
         .status-failure {
             color: var(--vscode-testing-iconFailed);
+        }
+        #testCasesContainer {
+            margin-bottom: 50px;
         }
     </style>
 </head>
@@ -423,7 +488,7 @@ export function getInputWebviewContent(selectedText: string): string {
                     <textarea id="systemMessage" rows="1" placeholder="Enter system message here">${selectedText}</textarea>
                 </div>
                 <div class="message-container">
-                    <div class="message-header">User message</div>
+                    <div class="message-header">User Message</div>
                     <div id="blocksContainer">
                         <div class="block-container">
                             <textarea class="blockContent" rows="1" placeholder="Prompt text..."></textarea>
@@ -438,11 +503,11 @@ export function getInputWebviewContent(selectedText: string): string {
                 <div class="title-header">Model Comparision Analysis</div>
                 <div class="graphs-container">
                     <div class="graph-section">
-                        <h4>Cost Comparison</h4>
+                        <h4>Average Cost</h4>
                         <div id="costComparison"></div>
                     </div>
                     <div class="graph-section">
-                        <h4>Latency Comparison</h4>
+                        <h4>Average Latency</h4>
                         <div id="latencyComparison"></div>
                     </div>
                 </div>
@@ -465,8 +530,6 @@ export function getInputWebviewContent(selectedText: string): string {
         const modelSelect = document.getElementById('modelSelect');
 
         const lastCompletedResultConatainer = document.getElementById('lastCompletedResult');
-
-        let selectedKeywords = new Set();
 
         let currentStreamingContent = '';
         let completedResults = [];
@@ -542,7 +605,6 @@ export function getInputWebviewContent(selectedText: string): string {
 
         executeButton.addEventListener('click', () => {
             disableExecuteButton();
-            selectedKeywords.clear();
             const systemMessage = systemMessageElement.value;
             const blocks = Array.from(document.querySelectorAll('.blockContent')).map(el => el.value);
             vscode.postMessage({
@@ -551,6 +613,9 @@ export function getInputWebviewContent(selectedText: string): string {
                 userPrompts: blocks,
                 maxTokens: document.getElementById('maxTokens').value,
                 temperature: document.getElementById('temperatureInput').value,
+                topP: document.getElementById('topP').value,
+                frequencyPenalty: document.getElementById('frequencyPenalty').value,
+                presencePenalty: document.getElementById('presencePenalty').value,
                 llmProvider: providerSelect.value,
                 llmModel: modelSelect.value
             });
@@ -568,98 +633,136 @@ export function getInputWebviewContent(selectedText: string): string {
         }
 
         function updateLastCompletedResultToDisplay() {
+            // exclude unit test results
+            const filteredCompletedResults = completedResults.filter(result => !result.isFromTest);
             // only show last result
-            const result = completedResults[completedResults.length - 1];
+            const result = filteredCompletedResults[filteredCompletedResults.length - 1];
+            let jsonString = null;
+            try {
+                const jsonObject = JSON.parse(result.content);
+                jsonString = JSON.stringify(jsonObject, null, 2);
+            } catch (e) {
+                jsonString = null;
+            }
             lastCompletedResultConatainer.innerHTML = \`
             <div class="completion-result">
                 <div class="result-header">
                     <h5>Current Completion</h5>
                 </div>
                 <div class="result-content" id="content\">
-                    \${result.content}
+                    \${jsonString === null ? result.content : jsonString}
                 </div>
                 <div class="result-metrics">
                     Latency: \${nanoToMilliseconds(result.metrics.latency).toFixed(2)} ms, 
                     Cost: $\${result.metrics.cost.toFixed(6)}
                 </div>
-                <div id="selectedKeywords"></div>
-                <div id="keywordError" class="error-message hidden"></div>
-                <div class="test-buttons">
-                    <button id="addKeywordsMatchingTest" class="mini-button">Add Keywords Test</button>
-                    <button id="addEvalAgentTest" class="mini-button">Add Eval Agent Test</button>
+                <div class="test-case-form collapsed">
+                    <h5 class="test-case-form-header">Add as a Test Case</h5>
+                    <div class="test-case-form-content hidden">
+                        <div class="form-row">
+                            <div class="keywords-container">
+                                <input type="text" id="keywordsInput" placeholder="Keywords to match (Tab to add)">
+                                <div id="keywordTags"></div>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="validateJsonCheckbox">
+                                <label for="validateJsonCheckbox">Validate JSON</label>
+                            </div>
+                            <button id="addTestCase" class="mini-button">Add</button>
+                        </div>
+                        <div id="testCaseError" class="error-message hidden"></div>
+                    </div>
                 </div>
             </div>
              \`;
 
             const contentElement = document.getElementById('content');
-            contentElement.addEventListener('mouseup', handleTextSelection);
 
             let userMessages = [];
             if (result.requestBody && result.requestBody.messages.length > 0) {
                 userMessages = result.requestBody.messages.filter(message => message.role === 'user');
             }
 
-            // Add event listeners for the new buttons
-            document.getElementById('addKeywordsMatchingTest').addEventListener('click', () => {
-                if (selectedKeywords.size === 0) {
-                    showKeywordError("Please highlight and select keywords from the content above.");
-                } else {
-                    addTest('keywords', userMessages, selectedKeywords);
-                    selectedKeywords.clear();
-                    updateSelectedKeywordsDisplay();
+            // Add event listeners for the new test form
+            const keywordsInput = document.getElementById('keywordsInput');
+            const keywordTags = document.getElementById('keywordTags');
+            const validateJsonCheckbox = document.getElementById('validateJsonCheckbox');
+
+
+            keywordsInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const keyword = keywordsInput.value.trim();
+                    if (keyword) {
+                        const tag = document.createElement('span');
+                        tag.className = 'keyword-tag';
+                        tag.textContent = keyword;
+                        keywordTags.appendChild(tag);
+                        keywordsInput.value = '';
+                        errorMessage.classList.add('hidden');
+                    }
                 }
             });
-            document.getElementById('addEvalAgentTest').addEventListener('click', () => {
-                showKeywordError("Available in the next release..");
-                setTimeout(() => {
-                    hideKeywordError();
-                }, 1000);
+
+            validateJsonCheckbox.addEventListener('change', () => {
+                errorMessage.classList.add('hidden');
             });
+
+            keywordTags.addEventListener('click', (e) => {
+                if (e.target.classList.contains('keyword-tag')) {
+                    e.target.remove();
+                    if (keywordTags.children.length === 0 && !validateJsonCheckbox.checked) {
+                        errorMessage.textContent = "Please add keywords and press tab or select JSON validation.";
+                        errorMessage.classList.remove('hidden');
+                    }
+                }
+            });
+
+            const addTestCaseButton = document.getElementById('addTestCase');
+            const errorMessage = document.getElementById('testCaseError');
+
+            
+            addTestCaseButton.addEventListener('click', () => {
+                const keywords = Array.from(keywordTags.children).map(tag => tag.textContent);
+                const shouldValidateJson = validateJsonCheckbox.checked;
+    
+                if (keywords.length === 0 && !shouldValidateJson) {
+                    errorMessage.textContent = "Please add keywords or select JSON validation.";
+                    errorMessage.classList.remove('hidden');
+                } else {
+                    errorMessage.classList.add('hidden');
+                    addTest(result.requestBody.messages.filter(message => message.role === 'user'), keywords, shouldValidateJson);
+                }
+            });
+
+            const testCaseFormHeader = lastCompletedResultConatainer.querySelector('.test-case-form-header');
+            const testCaseFormContent = lastCompletedResultConatainer.querySelector('.test-case-form-content');
+            const testCaseForm = lastCompletedResultConatainer.querySelector('.test-case-form');
+
+            testCaseFormHeader.addEventListener('click', () => {
+                testCaseForm.classList.toggle('collapsed');
+                testCaseFormContent.classList.toggle('hidden');
+            });
+
             updateTestCasesDisplay();
         }
 
-        function handleTextSelection() {
-            const selection = window.getSelection();
-            const selectedText = selection.toString().trim().toLowerCase();
-            if (selectedText) {
-                selectedKeywords.add(selectedText);
-                updateSelectedKeywordsDisplay();
-            }
-        }
-
-        function updateSelectedKeywordsDisplay() {
-            const keywordsContainer = document.getElementById('selectedKeywords');
-            keywordsContainer.innerHTML = Array.from(selectedKeywords).map(keyword => 
-                \`<span class="keyword-tag">\${keyword}<span class="remove-keyword" onclick="removeKeyword('\${keyword}')">&times;</span></span>\`
-            ).join('');
-            hideKeywordError();
-        }
-
-        function removeKeyword(keyword) {
-            selectedKeywords.delete(keyword);
-            updateSelectedKeywordsDisplay();
-        }
-
-        function showKeywordError(message) {
-            const errorElement = document.getElementById('keywordError');
-            errorElement.textContent = message;
-            errorElement.classList.remove('hidden');
-        }
-
-        function hideKeywordError() {
-            const errorElement = document.getElementById('keywordError');
-            errorElement.classList.add('hidden');
-        }
-
-        function addTest(type, userMessages, keywords) {
+        function addTest(userMessages, keywords, shouldValidateJson) {
             const uniqueId = Date.now().toString(36) + Math.random().toString(36).substr(2);
-            testCases.push({ id: uniqueId, type, userMessages, keywords: Array.from(keywords) });
+            testCases.push({ 
+                id: uniqueId,
+                userMessages,
+                keywords,
+                shouldValidateJson
+            });
             updateTestCasesDisplay();
         }
 
         // Modify the addCompletedResult function
-        function addCompletedResult(content, metrics, requestBody, llmProvider) {
-            completedResults.push({ content, metrics, requestBody, llmProvider });
+        function addCompletedResult(content, metrics, requestBody, llmProvider, isFromTest) {
+            completedResults.push({ content, metrics, requestBody, llmProvider, isFromTest });
             updateLastCompletedResultToDisplay();
             updateMetricsGraph();
         }
@@ -763,7 +866,7 @@ export function getInputWebviewContent(selectedText: string): string {
                     <div class="test-cases-header">
                         <h4 class="test-cases-title">Test Cases</h4>
                         <div class="test-cases-buttons">
-                            <button id="runTestCases" class="test-cases-button">Run</button>
+                            <button id="runTestCases" class="test-cases-button">Run All Tests</button>
                             <button id="saveTestCases" class="test-cases-button">Save</button>
                         </div>
                     </div>
@@ -773,7 +876,6 @@ export function getInputWebviewContent(selectedText: string): string {
             }           
             testCases.slice().reverse().forEach((testCase, index) => {
                 const actualIndex = testCases.length - 1 - index;
-                const testTypeName = testCase.type === 'keywords' ? 'Keywords Matching' : 'Eval Agent';
         
                 // Format user messages
                 const userMessagesHtml = testCase.userMessages.map((message, msgIndex) => {
@@ -802,12 +904,12 @@ export function getInputWebviewContent(selectedText: string): string {
                 testCasesContainer.innerHTML += \`
                     <div class="test-case" id="test-case-\${testCase.id}">
                         <div class="test-case-header">
-                            <h5>Test Case \${testCases.length - index} [\${testTypeName}]</h5>
+                            <h5>Test Case \${testCases.length - index}</h5>
                             <span class="test-case-status"></span>
                             <button class="delete-test-case-btn"onclick="deleteTestCase('\${testCase.id}')">del</button>
                         </div>
+                        <div class="message-header">User Messages</div>
                         <div class="user-messages-container">\${userMessagesHtml}</div>
-                        <div class="test-case-content">\${testCase.keywords !== null ? \`Keywords: \${Array.from(testCase.keywords).join(', ')}\` : ''}</div>
                     </div>
                 \`;
             });
@@ -845,6 +947,9 @@ export function getInputWebviewContent(selectedText: string): string {
                         testCases: testCases,
                         maxTokens: document.getElementById('maxTokens').value,
                         temperature: document.getElementById('temperatureInput').value,
+                        topP: document.getElementById('topP').value,
+                        frequencyPenalty: document.getElementById('frequencyPenalty').value,
+                        presencePenalty: document.getElementById('presencePenalty').value,
                         llmProvider: providerSelect.value,
                         llmModel: modelSelect.value
                     });
@@ -852,27 +957,24 @@ export function getInputWebviewContent(selectedText: string): string {
             }
 
             if (saveButton) {
+                const errorMessage = document.getElementById('testCaseError');
                 saveButton.addEventListener('click', () => {
-                    showKeywordError("Available in the next release..");
+                    errorMessage.textContent = "Export/Save coming in the next release..";
+                    errorMessage.classList.remove('hidden');
                     setTimeout(() => {
-                        hideKeywordError();
-                    }, 1500);
+                        errorMessage.classList.add('hidden');
+                    }, 1000);
                 });
             }
         }
 
-        function updateTestCaseStatus(id, testResult) {
+        function updateTestCaseStatus(testResult) {
+            const id = testResult.testCase.id
             const testCase = document.getElementById(\`test-case-\${id}\`);
             const status = testResult.passed ? 'success' : 'failure';
             if (testCase) {
                 const statusElement = testCase.querySelector('.test-case-status');
                 statusElement.className = 'test-case-status';
-        
-                // Clear previous results
-                const previousResult = testCase.querySelector('.test-result');
-                if (previousResult) {
-                    previousResult.remove();
-                }
         
                 switch(status) {
                     case 'running':
@@ -897,8 +999,8 @@ export function getInputWebviewContent(selectedText: string): string {
                 const previewContent = hasMoreCharacters ? responseContent.slice(0, 100) + '...' : responseContent;
 
                 resultElement.innerHTML = \`
+                    <div class="message-header">Test Response</div>
                     <div class="response-message">
-                        <div class="message-header">Response:</div>
                         <div class="\${hasMoreCharacters ? 'message-preview' : 'message-full'}">
                             \${previewContent}
                         </div>
@@ -918,9 +1020,8 @@ export function getInputWebviewContent(selectedText: string): string {
                     \`;
                 }
 
-                // Insert the result after the keywords
-                const keywordsElement = testCase.querySelector('.test-case-content');
-                keywordsElement.insertAdjacentElement('afterend', resultElement);
+                // Add the result element to the test case
+                testCase.appendChild(resultElement);
 
                 // Add event listener for toggle button
                 const toggleButton = resultElement.querySelector('.toggle-message');
@@ -944,7 +1045,6 @@ export function getInputWebviewContent(selectedText: string): string {
             }
         }
 
-
         window.addEventListener('message', event => {
             const message = event.data;
             switch (message.command) {
@@ -953,7 +1053,7 @@ export function getInputWebviewContent(selectedText: string): string {
                     updateStreamingResult();
                     break;
                 case 'updateMetricsAndRequestBody':
-                    addCompletedResult(currentStreamingContent, message.metrics, message.requestBody, message.llmProvider);
+                    addCompletedResult(currentStreamingContent, message.metrics, message.requestBody, message.llmProvider, false);
                     clearStreamingResults()
                     currentStreamingContent = '';
                     enableExecuteButton();
@@ -962,7 +1062,9 @@ export function getInputWebviewContent(selectedText: string): string {
                     break;
                 case 'updateTestResult':
                     const result = message.result;
-                    updateTestCaseStatus(result.testCase.id, result);
+                    // TODO: fix this
+                    // addCompletedResult(result.response, result.metrics, result.requestBody, result.llmProvider, true);
+                    updateTestCaseStatus(result);
                     break;
                 case 'error':
                     enableExecuteButton();
@@ -980,7 +1082,6 @@ export function getInputWebviewContent(selectedText: string): string {
                 updateTestCasesDisplay();
             }
         }
-        window.removeKeyword = removeKeyword;
 
     </script>
 </body>

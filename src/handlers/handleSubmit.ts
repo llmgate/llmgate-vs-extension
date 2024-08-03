@@ -4,7 +4,9 @@ import { BACKEND_URL } from '../utils/constants';
 import { updateErrorInWebview, updateMetricsAndRequestBodyInWebview, updateStreamingResponseInWebview, updateTestResultInWebview } from '../utils/updateResponse';
 import { promptForApiKey } from '../utils/promptForApiKey';
 
-export async function handleRunTestCases(systemPrompt: string, testCases: any[], maxTokens: number, temperature: number, llmProvider: string, llmModel: string, panel: vscode.WebviewPanel) {
+export async function handleRunTestCases(systemPrompt: string, testCases: any[], maxTokens: number, 
+    temperature: number, topP: number, frequencyPenalty: number, presencePenalty: number,
+    llmProvider: string, llmModel: string, panel: vscode.WebviewPanel) {
     // Check if API key is set
     const config = vscode.workspace.getConfiguration('llmgate');
     let openaiApiKey = config.get<string>('openaiKey');
@@ -48,6 +50,9 @@ export async function handleRunTestCases(systemPrompt: string, testCases: any[],
                 ],
                 "temperature": Number(temperature),
                 "max_tokens": Number(maxTokens),
+                "top_p": Number(topP),
+                "frequency_penalty": Number(frequencyPenalty),
+                "presence_penalty": Number(presencePenalty),
                 "stream": false
             };
 
@@ -57,7 +62,10 @@ export async function handleRunTestCases(systemPrompt: string, testCases: any[],
                 const cost = response.cost;
                 const latency = response.latency;
                 const content = responseData.choices[0].message.content;
-
+                
+                let passed = true;
+                let errorMessage: string | null = "";
+                // keywords check
                 let missingKeywords = [];
                 const lowerContent = content.toLowerCase();
                 for (let i = 0; i < testCase.keywords.length; i++) {
@@ -65,17 +73,37 @@ export async function handleRunTestCases(systemPrompt: string, testCases: any[],
                     if (!lowerContent.includes(keyword)) {
                         missingKeywords.push(testCase.keywords[i]);
                     }
-                }
-    
+                }    
                 const allKeywordsPresent = missingKeywords.length === 0;
-                
+                if (!allKeywordsPresent) {
+                    passed = false;
+                    errorMessage = `Missing keywords: ${missingKeywords.join(', ')}, `;
+                }
+                // test cases check
+                if (testCase.shouldValidateJson) {
+                    try {
+                        JSON.parse(content);
+                    } catch (e) {
+                        passed = false;
+                        errorMessage += "Invalid JSON, ";
+                    }
+                }
+
+                if (errorMessage === "") {
+                    errorMessage = null;
+                }
+
                 const result = {
                     testCase: testCase,
-                    passed: allKeywordsPresent,
+                    passed: passed,
                     response: content,
-                    cost: cost,
-                    latency: latency,
-                    error: allKeywordsPresent ? null : `Missing keywords: ${missingKeywords.join(', ')}`
+                    metrics: {
+                        latency: latency,
+                        cost: cost,    
+                    },
+                    requestBody: requestBody,
+                    llmProvider: llmProvider,
+                    error: errorMessage
                 };
 
                 updateTestResultInWebview(result, panel);
@@ -93,7 +121,9 @@ export async function handleRunTestCases(systemPrompt: string, testCases: any[],
     });
 }
 
-export async function handleSubmit(systemPrompt: string, userPrompts: string[], maxTokens: number, temperature: number, llmProvider: string, llmModel: string, panel: vscode.WebviewPanel) {
+export async function handleSubmit(systemPrompt: string, userPrompts: string[], maxTokens: number, 
+    temperature: number, topP: number, frequencyPenalty: number, presencePenalty: number,
+    llmProvider: string, llmModel: string, panel: vscode.WebviewPanel) {
     // Check if API key is set
     const config = vscode.workspace.getConfiguration('llmgate');
     // let llmgateAPiKey = config.get<string>('apiKey');
@@ -152,6 +182,9 @@ export async function handleSubmit(systemPrompt: string, userPrompts: string[], 
         "messages": messages,
         "temperature": Number(temperature),
         "max_tokens": Number(maxTokens),
+        "top_p": Number(topP),
+        "frequency_penalty": Number(frequencyPenalty),
+        "presence_penalty": Number(presencePenalty),
         "stream": true
     };
     
@@ -270,11 +303,11 @@ async function sendToBackend(requestBody: any,
 
     // Get cost from header and convert to number if it exists
     const cost = response.headers['llm-cost'];
-    const parsedCost = cost ? parseFloat(cost) : undefined;
+    const parsedCost = cost ? parseFloat(cost) : 0;
 
     // Get latency from header and convert to number if it exists
     const latency = response.headers['llm-latency'];
-    const parsedLatency = latency ? parseInt(latency, 10) : undefined;
+    const parsedLatency = latency ? parseInt(latency, 10) : 0;
 
     return {
         data: response.data,

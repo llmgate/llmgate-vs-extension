@@ -2,7 +2,7 @@
   "name": "llmgate",
   "displayName": "LLMGate",
   "description": "Streamline your prompt engineering workflow from VS Code. Never ship a bad prompt.",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "icon": "resources/logo.png",
   "publisher": "LLMGate",
   "repository": {

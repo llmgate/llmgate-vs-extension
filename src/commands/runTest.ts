@@ -28,10 +28,14 @@ export async function runTest() {
         async message => {
             switch (message.command) {
                 case 'execute':
-                    await handleSubmit(message.systemPrompt, message.userPrompts, message.maxTokens as number, message.temperature as number,  message.llmProvider, message.llmModel, panel);
+                    await handleSubmit(message.systemPrompt, message.userPrompts, 
+                        message.maxTokens as number, message.topP as number, message.frequencyPenalty as number, message.presencePenalty as number, 
+                        message.temperature as number,  message.llmProvider, message.llmModel, panel);
                     return;
                 case 'runtestcases':
-                    await handleRunTestCases(message.systemPrompt, message.testCases, message.maxTokens as number, message.temperature as number,  message.llmProvider, message.llmModel, panel);
+                    await handleRunTestCases(message.systemPrompt, message.testCases, message.maxTokens as number, 
+                        message.temperature as number, message.topP as number, message.frequencyPenalty as number, message.presencePenalty as number,   
+                        message.llmProvider, message.llmModel, panel);
                     return;
             }
         },
