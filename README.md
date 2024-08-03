@@ -70,10 +70,10 @@
 
 ## 📝 Release Notes
 
-### 1.0.3
+### 0.0.3
 - Support JSON validation for test cases
 
-### 1.0.2
+### 0.0.2
 - Rewrite with enhanced features
 - Model comparison for cost and latency
 - Test case creation and management
