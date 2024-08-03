@@ -245,6 +245,12 @@ export function getInputWebviewContent(selectedText: string): string {
         .test-case-header {
             margin-right: 30px; /* Make space for the delete button */
         }
+        .test-cases-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
         .test-cases-title {
             margin: 0;
         }
@@ -299,9 +305,25 @@ export function getInputWebviewContent(selectedText: string): string {
             font-size: 12px;
         }
         .test-case-form {
-            margin-top: 8px;
-            padding-top: 8px;
+            margin-top: 4px;
+            padding-top: 4px;
             border-top: 1px solid var(--vscode-panel-border);
+        }
+        .test-case-form-header::before {
+            content: '▶';
+            display: inline-block;
+            margin-right: 5px;
+            transition: transform 0.3s;
+        }
+        .test-case-form:not(.collapsed) .test-case-form-header::before {
+            transform: rotate(90deg);
+        }
+        .test-case-form-content.hidden {
+            display: none;
+        }
+        .test-case-form-header {
+            cursor: pointer;
+            user-select: none;
         }
         .form-row {
             display: flex;
@@ -412,6 +434,9 @@ export function getInputWebviewContent(selectedText: string): string {
         }
         .status-failure {
             color: var(--vscode-testing-iconFailed);
+        }
+        #testCasesContainer {
+            margin-bottom: 50px;
         }
     </style>
 </head>
@@ -621,22 +646,24 @@ export function getInputWebviewContent(selectedText: string): string {
                     Latency: \${nanoToMilliseconds(result.metrics.latency).toFixed(2)} ms, 
                     Cost: $\${result.metrics.cost.toFixed(6)}
                 </div>
-                <div class="test-case-form">
-                    <h5>Add as a Test Case</h5>
-                    <div class="form-row">
-                        <div class="keywords-container">
-                            <input type="text" id="keywordsInput" placeholder="Keywords to match (Tab to add)">
-                            <div id="keywordTags"></div>
+                <div class="test-case-form collapsed">
+                    <h5 class="test-case-form-header">Add as a Test Case</h5>
+                    <div class="test-case-form-content hidden">
+                        <div class="form-row">
+                            <div class="keywords-container">
+                                <input type="text" id="keywordsInput" placeholder="Keywords to match (Tab to add)">
+                                <div id="keywordTags"></div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="checkbox-container">
-                            <input type="checkbox" id="validateJsonCheckbox">
-                            <label for="validateJsonCheckbox">Validate JSON</label>
+                        <div class="form-row">
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="validateJsonCheckbox">
+                                <label for="validateJsonCheckbox">Validate JSON</label>
+                            </div>
+                            <button id="addTestCase" class="mini-button">Add</button>
                         </div>
-                        <button id="addTestCase" class="mini-button">Add</button>
+                        <div id="testCaseError" class="error-message hidden"></div>
                     </div>
-                    <div id="testCaseError" class="error-message hidden"></div>
                 </div>
             </div>
              \`;
@@ -698,6 +725,15 @@ export function getInputWebviewContent(selectedText: string): string {
                     errorMessage.classList.add('hidden');
                     addTest(result.requestBody.messages.filter(message => message.role === 'user'), keywords, shouldValidateJson);
                 }
+            });
+
+            const testCaseFormHeader = lastCompletedResultConatainer.querySelector('.test-case-form-header');
+            const testCaseFormContent = lastCompletedResultConatainer.querySelector('.test-case-form-content');
+            const testCaseForm = lastCompletedResultConatainer.querySelector('.test-case-form');
+
+            testCaseFormHeader.addEventListener('click', () => {
+                testCaseForm.classList.toggle('collapsed');
+                testCaseFormContent.classList.toggle('hidden');
             });
 
             updateTestCasesDisplay();
@@ -820,7 +856,7 @@ export function getInputWebviewContent(selectedText: string): string {
                     <div class="test-cases-header">
                         <h4 class="test-cases-title">Test Cases</h4>
                         <div class="test-cases-buttons">
-                            <button id="runTestCases" class="test-cases-button">Run</button>
+                            <button id="runTestCases" class="test-cases-button">Run All Tests</button>
                             <button id="saveTestCases" class="test-cases-button">Save</button>
                         </div>
                     </div>
@@ -907,8 +943,13 @@ export function getInputWebviewContent(selectedText: string): string {
             }
 
             if (saveButton) {
+                const errorMessage = document.getElementById('testCaseError');
                 saveButton.addEventListener('click', () => {
-                    console.log("TODO");
+                    errorMessage.textContent = "Export/Save coming in the next release..";
+                    errorMessage.classList.remove('hidden');
+                    setTimeout(() => {
+                        errorMessage.classList.add('hidden');
+                    }, 1000);
                 });
             }
         }
