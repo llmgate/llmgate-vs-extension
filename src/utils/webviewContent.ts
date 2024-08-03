@@ -316,7 +316,7 @@ export function getInputWebviewContent(selectedText: string): string {
             padding-right: 10px;
         }
         #keywordsInput {
-            height: 24px;
+            height: 18px;
             margin-bottom: 4px;
         }
         #keywordTags {
@@ -625,7 +625,7 @@ export function getInputWebviewContent(selectedText: string): string {
                     <h6>Add as a Test Case</h6>
                     <div class="form-row">
                         <div class="keywords-container">
-                            <input type="text" id="keywordsInput" placeholder="Keywords (Tab to add)">
+                            <input type="text" id="keywordsInput" placeholder="Keywords to match (Tab to add)">
                             <div id="keywordTags"></div>
                         </div>
                     </div>
@@ -677,7 +677,7 @@ export function getInputWebviewContent(selectedText: string): string {
                 if (e.target.classList.contains('keyword-tag')) {
                     e.target.remove();
                     if (keywordTags.children.length === 0 && !validateJsonCheckbox.checked) {
-                        errorMessage.textContent = "Please add keywords or select JSON validation.";
+                        errorMessage.textContent = "Please add keywords and press tab or select JSON validation.";
                         errorMessage.classList.remove('hidden');
                     }
                 }
@@ -970,6 +970,9 @@ export function getInputWebviewContent(selectedText: string): string {
                         <div class="error-message">\${testResult.error}</div>
                     \`;
                 }
+
+                // Add the result element to the test case
+                testCase.appendChild(resultElement);
 
                 // Add event listener for toggle button
                 const toggleButton = resultElement.querySelector('.toggle-message');
