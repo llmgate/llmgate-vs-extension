@@ -57,21 +57,10 @@ export async function handleRunTestCases(systemPrompt: string, testCases: any[],
                 const cost = response.cost;
                 const latency = response.latency;
                 const content = responseData.choices[0].message.content;
-
-                let missingKeywords = [];
-                const lowerContent = content.toLowerCase();
-                for (let i = 0; i < testCase.keywords.length; i++) {
-                    const keyword = testCase.keywords[i].toLowerCase();
-                    if (!lowerContent.includes(keyword)) {
-                        missingKeywords.push(testCase.keywords[i]);
-                    }
-                }
-    
-                const allKeywordsPresent = missingKeywords.length === 0;
                 
                 const result = {
                     testCase: testCase,
-                    passed: allKeywordsPresent,
+                    passed: true,
                     response: content,
                     metrics: {
                         latency: latency,
@@ -79,7 +68,7 @@ export async function handleRunTestCases(systemPrompt: string, testCases: any[],
                     },
                     requestBody: requestBody,
                     llmProvider: llmProvider,
-                    error: allKeywordsPresent ? null : `Missing keywords: ${missingKeywords.join(', ')}`
+                    error: null
                 };
 
                 updateTestResultInWebview(result, panel);

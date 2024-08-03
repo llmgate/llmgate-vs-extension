@@ -317,19 +317,6 @@ export function getInputWebviewContent(selectedText: string): string {
         .mini-button:hover {
             background-color: var(--vscode-button-secondaryHoverBackground, #45494e);
         }
-        .keyword-tag {
-            display: inline-block;
-            background-color: var(--vscode-badge-background);
-            color: var(--vscode-badge-foreground);
-            padding: 2px 6px;
-            margin: 2px;
-            border-radius: 3px;
-            font-size: 11px;
-        }
-        .keyword-tag .remove-keyword {
-            cursor: pointer;
-            margin-left: 4px;
-        }
         .error-message {
             color: var(--vscode-errorForeground);
             font-size: 12px;
@@ -466,8 +453,6 @@ export function getInputWebviewContent(selectedText: string): string {
 
         const lastCompletedResultConatainer = document.getElementById('lastCompletedResult');
 
-        let selectedKeywords = new Set();
-
         let currentStreamingContent = '';
         let completedResults = [];
         let testCases = [];
@@ -542,7 +527,6 @@ export function getInputWebviewContent(selectedText: string): string {
 
         executeButton.addEventListener('click', () => {
             disableExecuteButton();
-            selectedKeywords.clear();
             const systemMessage = systemMessageElement.value;
             const blocks = Array.from(document.querySelectorAll('.blockContent')).map(el => el.value);
             vscode.postMessage({
@@ -584,78 +568,29 @@ export function getInputWebviewContent(selectedText: string): string {
                     Latency: \${nanoToMilliseconds(result.metrics.latency).toFixed(2)} ms, 
                     Cost: $\${result.metrics.cost.toFixed(6)}
                 </div>
-                <div id="selectedKeywords"></div>
-                <div id="keywordError" class="error-message hidden"></div>
                 <div class="test-buttons">
-                    <button id="addKeywordsMatchingTest" class="mini-button">Add Keywords Test</button>
-                    <button id="addEvalAgentTest" class="mini-button">Add Eval Agent Test</button>
+                    <button id="addTestCase" class="mini-button">Add Test Case</button>
                 </div>
             </div>
              \`;
 
             const contentElement = document.getElementById('content');
-            contentElement.addEventListener('mouseup', handleTextSelection);
 
             let userMessages = [];
             if (result.requestBody && result.requestBody.messages.length > 0) {
                 userMessages = result.requestBody.messages.filter(message => message.role === 'user');
             }
 
-            // Add event listeners for the new buttons
-            document.getElementById('addKeywordsMatchingTest').addEventListener('click', () => {
-                if (selectedKeywords.size === 0) {
-                    showKeywordError("Please highlight and select keywords from the content above.");
-                } else {
-                    addTest('keywords', userMessages, selectedKeywords);
-                    selectedKeywords.clear();
-                    updateSelectedKeywordsDisplay();
-                }
-            });
-            document.getElementById('addEvalAgentTest').addEventListener('click', () => {
-                showKeywordError("Available in the next release..");
-                setTimeout(() => {
-                    hideKeywordError();
-                }, 1000);
+            // Add event listeners for the new test button
+            document.getElementById('addTestCase').addEventListener('click', () => {
+                addTest(result.requestBody.messages.filter(message => message.role === 'user'));
             });
             updateTestCasesDisplay();
         }
 
-        function handleTextSelection() {
-            const selection = window.getSelection();
-            const selectedText = selection.toString().trim().toLowerCase();
-            if (selectedText) {
-                selectedKeywords.add(selectedText);
-                updateSelectedKeywordsDisplay();
-            }
-        }
-
-        function updateSelectedKeywordsDisplay() {
-            const keywordsContainer = document.getElementById('selectedKeywords');
-            keywordsContainer.innerHTML = Array.from(selectedKeywords).map(keyword => 
-                \`<span class="keyword-tag">\${keyword}<span class="remove-keyword" onclick="removeKeyword('\${keyword}')">&times;</span></span>\`
-            ).join('');
-            hideKeywordError();
-        }
-
-        function removeKeyword(keyword) {
-            selectedKeywords.delete(keyword);
-            updateSelectedKeywordsDisplay();
-        }
-
-        function showKeywordError(message) {
-            const errorElement = document.getElementById('keywordError');
-            errorElement.textContent = message;
-            errorElement.classList.remove('hidden');
-        }
-
-        function hideKeywordError() {
-            const errorElement = document.getElementById('keywordError');
-            errorElement.classList.add('hidden');
-        }
-
-        function addTest(type, userMessages, keywords) {
+        function addTest(userMessages) {
             const uniqueId = Date.now().toString(36) + Math.random().toString(36).substr(2);
-            testCases.push({ id: uniqueId, type, userMessages, keywords: Array.from(keywords) });
+            testCases.push({ id: uniqueId, userMessages });
             updateTestCasesDisplay();
         }
 
@@ -775,7 +710,6 @@ export function getInputWebviewContent(selectedText: string): string {
             }           
             testCases.slice().reverse().forEach((testCase, index) => {
                 const actualIndex = testCases.length - 1 - index;
-                const testTypeName = testCase.type === 'keywords' ? 'Keywords Matching' : 'Eval Agent';
         
                 // Format user messages
                 const userMessagesHtml = testCase.userMessages.map((message, msgIndex) => {
@@ -804,12 +738,11 @@ export function getInputWebviewContent(selectedText: string): string {
                 testCasesContainer.innerHTML += \`
                     <div class="test-case" id="test-case-\${testCase.id}">
                         <div class="test-case-header">
-                            <h5>Test Case \${testCases.length - index} [\${testTypeName}]</h5>
+                            <h5>Test Case \${testCases.length - index}</h5>
                             <span class="test-case-status"></span>
                             <button class="delete-test-case-btn"onclick="deleteTestCase('\${testCase.id}')">del</button>
                         </div>
                         <div class="user-messages-container">\${userMessagesHtml}</div>
-                        <div class="test-case-content">\${testCase.keywords !== null ? \`Keywords: \${Array.from(testCase.keywords).join(', ')}\` : ''}</div>
                     </div>
                 \`;
             });
@@ -855,10 +788,7 @@ export function getInputWebviewContent(selectedText: string): string {
 
             if (saveButton) {
                 saveButton.addEventListener('click', () => {
-                    showKeywordError("Available in the next release..");
-                    setTimeout(() => {
-                        hideKeywordError();
-                    }, 1500);
+                    console.log("TODO");
                 });
             }
         }
@@ -921,10 +851,6 @@ export function getInputWebviewContent(selectedText: string): string {
                     \`;
                 }
 
-                // Insert the result after the keywords
-                const keywordsElement = testCase.querySelector('.test-case-content');
-                keywordsElement.insertAdjacentElement('afterend', resultElement);
-
                 // Add event listener for toggle button
                 const toggleButton = resultElement.querySelector('.toggle-message');
                 if (toggleButton) {
@@ -984,7 +910,6 @@ export function getInputWebviewContent(selectedText: string): string {
                 updateTestCasesDisplay();
             }
         }
-        window.removeKeyword = removeKeyword;
 
     </script>
 </body>
