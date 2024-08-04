@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { getInputWebviewContent } from '../utils/webviewContent';
-import { handleRunTestCases, handleSubmit } from '../handlers/handleSubmit';
+import { handleRunTestCases, handleSaveTestCases, handleSubmit, handleUploadTestCases } from '../handlers/handleSubmit';
 const path = require('path');
 
 export async function runTest() {
@@ -16,7 +16,10 @@ export async function runTest() {
         'llmgateInput',
         'Prompt Lab',
         vscode.ViewColumn.One,
-        { enableScripts: true },
+        { 
+            enableScripts: true,
+            retainContextWhenHidden: true,
+        },
     );
 
     panel.iconPath = vscode.Uri.file(path.join(__dirname, '..', 'resources', 'logo.png'));
@@ -36,6 +39,12 @@ export async function runTest() {
                     await handleRunTestCases(message.systemPrompt, message.testCases, message.maxTokens as number, 
                         message.temperature as number, message.topP as number, message.frequencyPenalty as number, message.presencePenalty as number,   
                         message.llmProvider, message.llmModel, panel);
+                    return;
+                case 'saveTestCases':
+                    await handleSaveTestCases(message.content, panel);
+                    return;
+                case 'uploadTestCases':
+                    await handleUploadTestCases(panel);
                     return;
             }
         },

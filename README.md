@@ -70,6 +70,10 @@
 
 ## 📝 Release Notes
 
+### 0.0.4
+- Retain context while switching tabs
+- Ability to Save and Upload Test Cases
+
 ### 0.0.3
 - Support JSON validation for test cases
 

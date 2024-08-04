@@ -26,3 +26,10 @@ export function updateTestResultInWebview(result: any, panel: any) {
         result: result
     });
 }
+
+export function updateUploadTestCasesInWebview(testCases: any, panel: any) {
+    panel.webview.postMessage({
+        command: 'updateUploadTestCases',
+        result: testCases,
+    });
+}

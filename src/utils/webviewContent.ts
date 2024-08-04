@@ -258,6 +258,26 @@ export function getInputWebviewContent(selectedText: string): string {
             display: flex;
             gap: 8px;
         }
+        .test-cases-button {
+            background-color: var(--vscode-button-secondaryBackground, #3a3d41);
+            color: var(--vscode-button-secondaryForeground, #ffffff);
+            border: none;
+            padding: 4px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: background-color 0.2s;
+        }
+        .test-cases-button:hover {
+            background-color: var(--vscode-button-secondaryHoverBackground, #45494e);
+        }
+        #runTestCases {
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+        }
+        #runTestCases:hover {
+            background-color: var(--vscode-button-hoverBackground);
+        }
         .delete-test-case-btn {
             background-color: var(--vscode-button-background);
             color: var(--vscode-button-foreground);
@@ -324,6 +344,14 @@ export function getInputWebviewContent(selectedText: string): string {
         .test-case-form-header {
             cursor: pointer;
             user-select: none;
+        }
+        .test-case-info {
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--vscode-descriptionForeground);
+        }
+        .keywords, .json-validation {
+            margin-bottom: 4px;
         }
         .form-row {
             display: flex;
@@ -749,6 +777,13 @@ export function getInputWebviewContent(selectedText: string): string {
             updateTestCasesDisplay();
         }
 
+        function addTests(newTestCases) {
+            for (var i = 0; i < newTestCases.length; i++) {
+                testCases.push(newTestCases[i]);
+            }
+            updateTestCasesDisplay();
+        }
+
         function addTest(userMessages, keywords, shouldValidateJson) {
             const uniqueId = Date.now().toString(36) + Math.random().toString(36).substr(2);
             testCases.push({ 
@@ -861,19 +896,23 @@ export function getInputWebviewContent(selectedText: string): string {
         // Add this function to update the test cases display
         function updateTestCasesDisplay() {
             const testCasesContainer = document.getElementById('testCasesContainer');
-            if (testCases.length > 0) {
-                testCasesContainer.innerHTML = \`
+             testCasesContainer.innerHTML = \`
                     <div class="test-cases-header">
                         <h4 class="test-cases-title">Test Cases</h4>
                         <div class="test-cases-buttons">
-                            <button id="runTestCases" class="test-cases-button">Run All Tests</button>
+                            <button id="runTestCases" class="test-cases-button">Run All</button>
+                            <button id="uploadTestCases" class="test-cases-button">Upload</button>
                             <button id="saveTestCases" class="test-cases-button">Save</button>
                         </div>
                     </div>
+                \`;  
+            if (testCases.length === 0) {
+                testCasesContainer.innerHTML += \`
+                    <div class="test-case">
+                        No Test Cases
+                    </div>
                 \`;
-            } else {
-                testCasesContainer.innerHTML = '';
-            }           
+            }        
             testCases.slice().reverse().forEach((testCase, index) => {
                 const actualIndex = testCases.length - 1 - index;
         
@@ -910,6 +949,14 @@ export function getInputWebviewContent(selectedText: string): string {
                         </div>
                         <div class="message-header">User Messages</div>
                         <div class="user-messages-container">\${userMessagesHtml}</div>
+                        <div class="test-case-info">
+                            <div class="keywords">
+                                <strong>Keywords:</strong> \${testCase.keywords.join(', ') || 'None'}
+                            </div>
+                            <div class="json-validation">
+                                <strong>Validate JSON:</strong> \${testCase.shouldValidateJson ? 'Yes' : 'No'}
+                            </div>
+                        </div>
                     </div>
                 \`;
             });
@@ -937,6 +984,7 @@ export function getInputWebviewContent(selectedText: string): string {
 
             const runButton = document.getElementById('runTestCases');
             const saveButton = document.getElementById('saveTestCases');
+            const uploadButton = document.getElementById('uploadTestCases');
 
             if (runButton) {
                 const systemMessage = systemMessageElement.value;
@@ -957,13 +1005,20 @@ export function getInputWebviewContent(selectedText: string): string {
             }
 
             if (saveButton) {
-                const errorMessage = document.getElementById('testCaseError');
                 saveButton.addEventListener('click', () => {
-                    errorMessage.textContent = "Export/Save coming in the next release..";
-                    errorMessage.classList.remove('hidden');
-                    setTimeout(() => {
-                        errorMessage.classList.add('hidden');
-                    }, 1000);
+                    const jsonString = JSON.stringify(testCases, null, 2);
+                    vscode.postMessage({
+                        command: 'saveTestCases',
+                        content: jsonString
+                    });
+                });
+            }
+
+             if (uploadButton) {
+                uploadButton.addEventListener('click', () => {
+                    vscode.postMessage({
+                        command: 'uploadTestCases',
+                    });
                 });
             }
         }
@@ -1066,6 +1121,9 @@ export function getInputWebviewContent(selectedText: string): string {
                     // addCompletedResult(result.response, result.metrics, result.requestBody, result.llmProvider, true);
                     updateTestCaseStatus(result);
                     break;
+                case 'updateUploadTestCases':
+                    addTests(message.result);
+                    return;
                 case 'error':
                     enableExecuteButton();
                     // show lastCompletedResultConatainer

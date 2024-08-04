@@ -1,8 +1,48 @@
 import * as vscode from 'vscode';
 import axios from 'axios';
 import { BACKEND_URL } from '../utils/constants';
-import { updateErrorInWebview, updateMetricsAndRequestBodyInWebview, updateStreamingResponseInWebview, updateTestResultInWebview } from '../utils/updateResponse';
+import { updateErrorInWebview, updateMetricsAndRequestBodyInWebview, updateStreamingResponseInWebview, updateTestResultInWebview, updateUploadTestCasesInWebview } from '../utils/updateResponse';
 import { promptForApiKey } from '../utils/promptForApiKey';
+const fs = require('fs');
+
+export async function handleUploadTestCases(panel: vscode.WebviewPanel) {
+    const uri = await vscode.window.showOpenDialog({
+        canSelectMany: false,
+        openLabel: 'Select JSON Test File',
+        filters: {
+            'JSON Files': ['json']
+        }
+    });
+
+    if (uri && uri[0]) {
+        fs.readFile(uri[0].fsPath, 'utf8', (err: any, data: any) => {
+            try {
+                const json = JSON.parse(data);
+                if (Array.isArray(json)) {
+                    updateUploadTestCasesInWebview(json, panel);
+                } else {
+                    vscode.window.showErrorMessage('Failed to read json file');
+                    return;
+                }
+            } catch (err) {
+                vscode.window.showErrorMessage('Failed to read json file');
+                return;
+            }
+        });
+    }
+}
+
+export async function handleSaveTestCases(content: string, panel: vscode.WebviewPanel) {
+    const uri = await vscode.window.showSaveDialog({
+        filters: {
+            'JSON Files': ['json']
+        }
+    });
+    if (uri) {
+        fs.writeFileSync(uri.fsPath, content);
+        vscode.window.showInformationMessage('Test cases saved successfully!');
+    }
+}
 
 export async function handleRunTestCases(systemPrompt: string, testCases: any[], maxTokens: number, 
     temperature: number, topP: number, frequencyPenalty: number, presencePenalty: number,
