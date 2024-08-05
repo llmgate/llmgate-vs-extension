@@ -51,6 +51,7 @@ export async function handleRunTestCases(systemPrompt: string, testCases: any[],
     const config = vscode.workspace.getConfiguration('llmgate');
     let openaiApiKey = config.get<string>('openaiKey');
     let geminiKey = config.get<string>('geminiKey');
+    let claudeKey = config.get<string>('claudeKey');
 
     var apiKey: string | undefined = undefined;
     if (llmProvider === "OpenAI") {
@@ -65,7 +66,13 @@ export async function handleRunTestCases(systemPrompt: string, testCases: any[],
         } else {
             apiKey = geminiKey;
         }
-    }
+    } else if (llmProvider === "Claude") {
+        if (!claudeKey) {
+            apiKey = await promptForApiKey(llmProvider);
+        } else {
+            apiKey = claudeKey;
+        }
+    } 
 
     if (apiKey === undefined) {
         vscode.window.showInformationMessage(`Please set up an API key.`);
@@ -169,6 +176,7 @@ export async function handleSubmit(systemPrompt: string, userPrompts: string[], 
     // let llmgateAPiKey = config.get<string>('apiKey');
     let openaiApiKey = config.get<string>('openaiKey');
     let geminiKey = config.get<string>('geminiKey');
+    let claudeKey = config.get<string>('claudeKey');
 
     var apiKey: string | undefined = undefined;
     var isExternalLLMKey = true;
@@ -183,6 +191,13 @@ export async function handleSubmit(systemPrompt: string, userPrompts: string[], 
             apiKey = await promptForApiKey(llmProvider);
         } else {
             apiKey = geminiKey;
+        }
+    }
+    else if (llmProvider === "Claude") {
+        if (!claudeKey) {
+            apiKey = await promptForApiKey(llmProvider);
+        } else {
+            apiKey = claudeKey;
         }
     }
 

@@ -41,6 +41,11 @@
           "type": "string",
           "default": "",
           "description": "Gemini API Key"
+        },
+        "llmgate.claudeKey": {
+          "type": "string",
+          "default": "",
+          "description": "Claude API Key"
         }
       }
     }

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { GEMINI_SIGNUP_URL, OPENAI_SIGNUP_URL, SIGNUP_URL } from './constants';
+import { CLAUDE_SIGNUP_URL, GEMINI_SIGNUP_URL, OPENAI_SIGNUP_URL, SIGNUP_URL } from './constants';
 
 export async function promptForApiKey(provider: string): Promise<string | undefined> {
     var signupURL = SIGNUP_URL;
@@ -7,6 +7,8 @@ export async function promptForApiKey(provider: string): Promise<string | undefi
         signupURL = OPENAI_SIGNUP_URL;
     } else if (provider === "Gemini") {
         signupURL = GEMINI_SIGNUP_URL;
+    } else if (provider === "Claude") {
+        signupURL = CLAUDE_SIGNUP_URL;
     }
     const result = await vscode.window.showInputBox({
         prompt: `Set your ${provider} API Key on VSCode. Don't have one? [Get it here](${signupURL})`,
@@ -30,6 +32,9 @@ export async function promptForApiKey(provider: string): Promise<string | undefi
         settingKey = "openaiKey";
     } else if (provider === "Gemini") {
         settingKey = "geminiKey";
+    }
+    else if (provider === "Claude") {
+        settingKey = "claudeKey";
     }
 
     // User entered an API key

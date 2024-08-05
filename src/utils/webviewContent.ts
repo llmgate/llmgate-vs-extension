@@ -1,6 +1,10 @@
 export function getInputWebviewContent(selectedText: string): string {
-    const openAIModels = ['gpt-4o-mini', 'gpt-4o', 'gpt-4'];
-    const geminiModels = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.0-pro'];
+    const modelMap = new Map([
+        ["OpenAI", ["gpt-4o-mini", "gpt-4o", "gpt-4"]],
+        ["Gemini", ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro"]],
+        ["Claude", ["claude-3-haiku-20240307", "claude-3-5-sonnet-20240620", "claude-3-opus-20240229"]],
+        // Add more providers and their models here
+    ]);
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -564,13 +568,12 @@ export function getInputWebviewContent(selectedText: string): string {
         let testCases = [];
         let metricsData = {};
 
-        const openAIModels = ${JSON.stringify(openAIModels)};
-        const geminiModels = ${JSON.stringify(geminiModels)};
+        const modelMap = new Map(${JSON.stringify([...modelMap])});
 
         function updateModelOptions() {
             const selectedProvider = providerSelect.value;
             modelSelect.innerHTML = '';
-            const models = selectedProvider === 'OpenAI' ? openAIModels : geminiModels;
+            const models = modelMap.get(selectedProvider) || [];
             models.forEach(model => {
                 const option = document.createElement('option');
                 option.value = model;
@@ -579,10 +582,22 @@ export function getInputWebviewContent(selectedText: string): string {
             });
         }
 
+        function populateProviderOptions() {
+            providerSelect.innerHTML = '';
+            modelMap.forEach((_, provider) => {
+                const option = document.createElement('option');
+                option.value = provider;
+                option.textContent = provider;
+                providerSelect.appendChild(option);
+            });
+            // Trigger model update after populating providers
+            updateModelOptions();
+        }
+
         providerSelect.addEventListener('change', updateModelOptions);
 
         // Initialize model options
-        updateModelOptions();
+        populateProviderOptions();
 
         function addBlock() {
             const blockHtml = \`
