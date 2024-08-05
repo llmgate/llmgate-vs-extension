@@ -2,7 +2,7 @@
   "name": "llmgate",
   "displayName": "LLMGate",
   "description": "Streamline your prompt engineering workflow from VS Code. Never ship a bad prompt.",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "icon": "resources/logo.png",
   "publisher": "LLMGate",
   "repository": {
@@ -24,6 +24,23 @@
         "title": "LLMGate Prompt Lab"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "llmgate-sidebar",
+          "title": "LLMGate",
+          "icon": "resources/logo.svg"
+        }
+      ]
+    },
+    "views": {
+      "llmgate-sidebar": [
+        {
+          "id": "llmgate-view",
+          "name": "LLMGate"
+        }
+      ]
+    },
     "configuration": {
       "title": "LLMGate",
       "properties": {
@@ -41,6 +58,11 @@
           "type": "string",
           "default": "",
           "description": "Gemini API Key"
+        },
+        "llmgate.claudeKey": {
+          "type": "string",
+          "default": "",
+          "description": "Claude API Key"
         }
       }
     }

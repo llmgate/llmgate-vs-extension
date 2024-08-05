@@ -1,6 +1,10 @@
 export function getInputWebviewContent(selectedText: string): string {
-    const openAIModels = ['gpt-4o-mini', 'gpt-4o', 'gpt-4'];
-    const geminiModels = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.0-pro'];
+    const modelMap = new Map([
+        ["OpenAI", ["gpt-4o-mini", "gpt-4o", "gpt-4"]],
+        ["Gemini", ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro"]],
+        ["Claude", ["claude-3-haiku-20240307", "claude-3-5-sonnet-20240620", "claude-3-opus-20240229"]],
+        // Add more providers and their models here
+    ]);
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -84,6 +88,26 @@ export function getInputWebviewContent(selectedText: string): string {
         .block-container {
             position: relative;
             margin-bottom: 4px;
+        }
+        .upload-image-btn {
+            position: absolute;
+            bottom: 4px;
+            right: 40px;
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            padding: 2px 6px;
+            font-size: 11px;
+            cursor: pointer;
+            opacity: 0.7;
+        }   
+        .upload-image-btn:hover {
+            opacity: 1;
+        }
+        .image-preview {
+            max-width: 100%;
+            max-height: 40px;
+            margin-top: 5px;
         }
         .remove-block-btn {
             position: absolute;
@@ -520,7 +544,9 @@ export function getInputWebviewContent(selectedText: string): string {
                     <div id="blocksContainer">
                         <div class="block-container">
                             <textarea class="blockContent" rows="1" placeholder="Prompt text..."></textarea>
+                            <button class="upload-image-btn">image</button>
                             <button class="remove-block-btn">del</button>
+                            <input type="file" class="image-upload" accept="image/*" style="display:none;">
                         </div>
                     </div>
                     <button id="addBlockBtn" class="add-block-btn">+ Add</button>
@@ -564,13 +590,12 @@ export function getInputWebviewContent(selectedText: string): string {
         let testCases = [];
         let metricsData = {};
 
-        const openAIModels = ${JSON.stringify(openAIModels)};
-        const geminiModels = ${JSON.stringify(geminiModels)};
+        const modelMap = new Map(${JSON.stringify([...modelMap])});
 
         function updateModelOptions() {
             const selectedProvider = providerSelect.value;
             modelSelect.innerHTML = '';
-            const models = selectedProvider === 'OpenAI' ? openAIModels : geminiModels;
+            const models = modelMap.get(selectedProvider) || [];
             models.forEach(model => {
                 const option = document.createElement('option');
                 option.value = model;
@@ -579,20 +604,35 @@ export function getInputWebviewContent(selectedText: string): string {
             });
         }
 
+        function populateProviderOptions() {
+            providerSelect.innerHTML = '';
+            modelMap.forEach((_, provider) => {
+                const option = document.createElement('option');
+                option.value = provider;
+                option.textContent = provider;
+                providerSelect.appendChild(option);
+            });
+            // Trigger model update after populating providers
+            updateModelOptions();
+        }
+
         providerSelect.addEventListener('change', updateModelOptions);
 
         // Initialize model options
-        updateModelOptions();
+        populateProviderOptions();
 
         function addBlock() {
             const blockHtml = \`
                 <div class="block-container">
                     <textarea class="blockContent" rows="1" placeholder="Prompt text..."></textarea>
+                    <button class="upload-image-btn">image</button>
                     <button class="remove-block-btn">del</button>
+                    <input type="file" class="image-upload" accept="image/*" style="display:none;">
                 </div>
             \`;
             blocksContainer.insertAdjacentHTML('beforeend', blockHtml);
             setupAutoResizeTextareas();
+            setupImageUpload();
         }
 
         addBlockBtn.addEventListener('click', addBlock);
@@ -617,7 +657,41 @@ export function getInputWebviewContent(selectedText: string): string {
             });
         }
 
-        document.addEventListener('DOMContentLoaded', setupAutoResizeTextareas);
+        function setupImageUpload() {
+            const containers = document.querySelectorAll('.block-container');
+            containers.forEach(container => {
+                const uploadBtn = container.querySelector('.upload-image-btn');
+                const fileInput = container.querySelector('.image-upload');
+                const textarea = container.querySelector('.blockContent');
+
+                uploadBtn.addEventListener('click', () => {
+                    fileInput.click();
+                });
+
+                fileInput.addEventListener('change', (event) => {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const base64Image = e.target.result;
+                            textarea.value = \`[Image: \${file.name}]\n\${textarea.value}\`;
+                            const imgPreview = document.createElement('img');
+                            imgPreview.src = base64Image;
+                            imgPreview.classList.add('image-preview');
+                            container.appendChild(imgPreview);
+                            textarea.dataset.imageData = base64Image;
+                            autoResizeTextarea(textarea);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setupAutoResizeTextareas();
+            setupImageUpload();
+        });
 
         function disableExecuteButton() {
             executeButton.disabled = true;
@@ -634,7 +708,14 @@ export function getInputWebviewContent(selectedText: string): string {
         executeButton.addEventListener('click', () => {
             disableExecuteButton();
             const systemMessage = systemMessageElement.value;
-            const blocks = Array.from(document.querySelectorAll('.blockContent')).map(el => el.value);
+            const blocks = Array.from(document.querySelectorAll('.blockContent')).map(el => {
+                const content = el.value;
+                const imageData = el.dataset.imageData;
+                if (imageData) {
+                    return [{ type: 'image_url', image_url: { url: imageData, detail: 'auto' } }];
+                }
+                return [{ type: 'text', text: content }];
+            });
             vscode.postMessage({
                 command: 'execute',
                 systemPrompt: systemMessage,
