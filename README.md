@@ -72,6 +72,7 @@
 
 ### 0.0.5
 - Support for Claude
+- Support Images for Requests
 
 ### 0.0.4
 - Retain context while switching tabs
