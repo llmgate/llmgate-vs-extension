@@ -24,6 +24,23 @@
         "title": "LLMGate Prompt Lab"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "llmgate-sidebar",
+          "title": "LLMGate",
+          "icon": "resources/logo.svg"
+        }
+      ]
+    },
+    "views": {
+      "llmgate-sidebar": [
+        {
+          "id": "llmgate-view",
+          "name": "LLMGate"
+        }
+      ]
+    },
     "configuration": {
       "title": "LLMGate",
       "properties": {
