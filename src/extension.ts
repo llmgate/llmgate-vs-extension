@@ -10,8 +10,8 @@ class LLMGateProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
     if (element) {
       return Promise.resolve([]);
     } else {
-      const runTestItem = new vscode.TreeItem('Run Prompt Lab 🧪');
-      runTestItem.command = { command: 'llmgate.runTest', title: 'Run Prompt Lab' };
+      const runTestItem = new vscode.TreeItem('Prompt Lab 🧪');
+      runTestItem.command = { command: 'llmgate.runTest', title: 'Prompt Lab' };
 
       const settingsItem = new vscode.TreeItem('Settings');
       settingsItem.command = { command: 'llmgate.openSettings', title: 'Set LLM Keys' };
