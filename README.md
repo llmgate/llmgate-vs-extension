@@ -26,7 +26,7 @@
 - Efficiently manage and organize your test cases
 
 ### 🔄 Multi-Model Support
-- OpenAI and Google Gemini models supported
+- OpenAI, Claude and Google Gemini models supported
 - Easy switching between different providers and models
 
 ### ⚙️ Customizable Parameters
@@ -69,6 +69,9 @@
 6. Click "Execute" to run your prompt
 
 ## 📝 Release Notes
+
+### 0.0.5
+- Support for Claude
 
 ### 0.0.4
 - Retain context while switching tabs
