@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import axios from 'axios';
-import { BACKEND_URL } from '../utils/constants';
+import { BACKEND_URL, REFINE_BACKEND_URL } from '../utils/constants';
 import { updateErrorInWebview, updateMetricsAndRequestBodyInWebview, updateStreamingResponseInWebview, updateTestResultInWebview, updateUploadTestCasesInWebview } from '../utils/updateResponse';
 import { promptForApiKey } from '../utils/promptForApiKey';
 const fs = require('fs');
@@ -370,3 +370,33 @@ async function sendToBackend(requestBody: any,
         latency: parsedLatency,
     };
 }
+
+export async function refinePromptBackend(prompt: string): Promise<any> {
+    const config = vscode.workspace.getConfiguration('llmgate');
+    let llmgateKey = config.get<string>('apiKey');
+    var apiKey: string | undefined = undefined;
+    if (!llmgateKey) {
+        apiKey = await promptForApiKey('LLMGate');
+    } else {
+        apiKey = llmgateKey;
+    }
+
+    if (apiKey === undefined) {
+        vscode.window.showInformationMessage(`Please set up LLMGate API key.`);
+        return;
+    }
+    
+    const response = await axios.post(REFINE_BACKEND_URL, { prompt }, {
+        headers: {
+            'key': `${apiKey}`,
+            'x-llmgate-source': 'vscode_extension',
+            'Content-Type': 'application/json'
+        },
+        responseType: 'json'
+    });
+
+    return {
+        data: response.data,
+    };
+}
+
