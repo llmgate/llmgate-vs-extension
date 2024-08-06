@@ -14,6 +14,7 @@
 - Run and iterate on prompts directly within VSCode
 - Real-time streaming of model responses
 - Support for system messages and multi-block user prompts
+- Refine your existing prompts
 
 ### 📊 Model Comparison
 - Compare different models side-by-side
@@ -69,6 +70,9 @@
 6. Click "Execute" to run your prompt
 
 ## 📝 Release Notes
+
+### 0.0.6
+- Refine Prompt: Select your prompt text, Open Extensions and click on Refine Prompt to get your prompt refined
 
 ### 0.0.5
 - Support for Claude

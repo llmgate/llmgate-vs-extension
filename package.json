@@ -2,7 +2,7 @@
   "name": "llmgate",
   "displayName": "LLMGate",
   "description": "Streamline your prompt engineering workflow from VS Code. Never ship a bad prompt.",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "icon": "resources/logo.png",
   "publisher": "LLMGate",
   "repository": {
@@ -22,6 +22,10 @@
       {
         "command": "llmgate.runTest",
         "title": "LLMGate Prompt Lab"
+      },
+      {
+        "command": "llmgate.refinePrompt",
+        "title": "LLMGate Refine Prompt"
       }
     ],
     "viewsContainers": {
